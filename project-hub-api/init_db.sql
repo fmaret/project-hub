@@ -1,11 +1,11 @@
 -- Create database
 -- CREATE DATABASE project_hub;
 
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS projects;
-DROP TABLE IF EXISTS roles;
-DROP TABLE IF EXISTS user_project_roles;
-DROP TABLE IF EXISTS tasks;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS projects CASCADE;
+DROP TABLE IF EXISTS roles CASCADE;
+DROP TABLE IF EXISTS user_project_roles CASCADE;
+DROP TABLE IF EXISTS tasks CASCADE;
 
 
 -- Table for users
@@ -13,6 +13,7 @@ CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(100) NOT NULL UNIQUE,
+    phone VARCHAR(100) UNIQUE,
     password VARCHAR(100) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -72,5 +73,39 @@ FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert default roles
-INSERT INTO roles (role_name) VALUES ('Admin'), ('Developer'), ('Viewer');
-INSERT INTO users (username, email, password) VALUES ('Florent', 'test@test.com', 'test')
+INSERT INTO roles (role_name) VALUES ('ADMIN'), ('MEMBER'), ('VIEWER');
+INSERT INTO users (username, email, password) VALUES ('Florent', 'test@test.com', 'test');
+INSERT INTO users (username, email, password) VALUES ('Wendy', 'test@test2.com', 'test');
+INSERT INTO users (username, email, password) VALUES ('Mathilda', 'test@test3.com', 'test');
+INSERT INTO projects (project_name, description) VALUES ('Backend', 'Mon project Backend');
+INSERT INTO projects (project_name, description) VALUES ('Frontend', 'Mon project Frontend');
+INSERT INTO user_project_roles (user_id, project_id, role_id)
+VALUES (
+    (SELECT user_id FROM users WHERE username = 'Florent'),
+    (SELECT project_id FROM projects WHERE project_name = 'Backend'),
+    (SELECT role_id FROM roles WHERE role_name = 'ADMIN')
+);
+INSERT INTO user_project_roles (user_id, project_id, role_id)
+VALUES (
+    (SELECT user_id FROM users WHERE username = 'Florent'),
+    (SELECT project_id FROM projects WHERE project_name = 'Backend'),
+    (SELECT role_id FROM roles WHERE role_name = 'MEMBER')
+);
+INSERT INTO user_project_roles (user_id, project_id, role_id)
+VALUES (
+    (SELECT user_id FROM users WHERE username = 'Florent'),
+    (SELECT project_id FROM projects WHERE project_name = 'Frontend'),
+    (SELECT role_id FROM roles WHERE role_name = 'MEMBER')
+);
+INSERT INTO user_project_roles (user_id, project_id, role_id)
+VALUES (
+    (SELECT user_id FROM users WHERE username = 'Wendy'),
+    (SELECT project_id FROM projects WHERE project_name = 'Frontend'),
+    (SELECT role_id FROM roles WHERE role_name = 'ADMIN')
+);
+INSERT INTO user_project_roles (user_id, project_id, role_id)
+VALUES (
+    (SELECT user_id FROM users WHERE username = 'Mathilda'),
+    (SELECT project_id FROM projects WHERE project_name = 'Backend'),
+    (SELECT role_id FROM roles WHERE role_name = 'MEMBER')
+);
