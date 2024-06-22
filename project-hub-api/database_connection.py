@@ -85,26 +85,26 @@ def with_connection(func):
     return wrapper
 
 @with_connection
-def get_user_by_id(user_id):
-    query = sql.SQL("SELECT * FROM users WHERE user_id = %s")
-    params = (user_id,)
+def get_user_by_id(id):
+    query = sql.SQL("SELECT * FROM users WHERE id = %s")
+    params = (id,)
     return {'sql': query, 'params': params, 'fetchone': True}
 
 @with_connection
 def _create_user(name: str, email: str, password: str):
-    query = sql.SQL("INSERT INTO users (username, email, password) VALUES (%s, %s, %s) RETURNING user_id")
+    query = sql.SQL("INSERT INTO users (username, email, password) VALUES (%s, %s, %s) RETURNING id")
     params = (name, email, password,)
     return {'sql': query, 'params': params, 'fetchone': True}
 
 @with_connection
-def _create_project(project_name: str, description: str):
-    query = sql.SQL("INSERT INTO projects (project_name, description) VALUES (%s, %s) RETURNING project_id")
-    params = (project_name, description)
+def _create_project(name: str, description: str):
+    query = sql.SQL("INSERT INTO projects (name, description) VALUES (%s, %s) RETURNING id")
+    params = (name, description)
     return {'sql': query, 'params': params, 'fetchone': True}
 
 @with_connection
 def _create_role(role_name: str):
-    query = sql.SQL("INSERT INTO roles (role_name) VALUES (%s) RETURNING role_id")
+    query = sql.SQL("INSERT INTO roles (role_name) VALUES (%s) RETURNING id")
     params = (role_name,)
     return {'sql': query, 'params': params, 'fetchone': True}
 
@@ -116,28 +116,28 @@ def _add_role_to_user(user_id: int, project_id: int, role_id: int):
 
 @to_json(["projectId", "projectName", "projectDescription"])
 @with_connection
-def _get_project_by_id(project_id: int):
-    query = sql.SQL("SELECT project_id, project_name, description FROM projects WHERE project_id = %s;")
-    params = (project_id,)
+def _get_project_by_id(id: int):
+    query = sql.SQL("SELECT id, name, description FROM projects WHERE id = %s;")
+    params = (id,)
     return {'sql': query, 'params': params, 'fetchone': True}
 
 @to_json_get_user_by_id()
 @with_connection
-def _get_user_by_id(project_id: int):
+def _get_user_by_id(id: int):
     query = sql.SQL("""
-        SELECT username, project_name, role_name 
+        SELECT username, p.name, r.name 
         FROM users 
-        join user_project_roles upr ON upr.user_id  =users.user_id 
-        join projects p on p.project_id = upr.project_id 
-        join roles r on r.role_id = upr.role_id 
-        WHERE users.user_id = %s;
+        join user_project_roles upr ON upr.user_id  =users.id 
+        join projects p on p.id = upr.project_id 
+        join roles r on r.id = upr.role_id 
+        WHERE users.id = %s;
     """)
-    params = (project_id,)
+    params = (id,)
     return {'sql': query, 'params': params, 'fetchall': True}
 
 @to_json(["roleId", "roleName"])
 @with_connection
-def _get_role_by_id(role_id: int):
-    query = sql.SQL("SELECT role_id, role_name FROM roles WHERE role_id = %s;")
-    params = (role_id,)
+def _get_role_by_id(id: int):
+    query = sql.SQL("SELECT id, name FROM roles WHERE id = %s;")
+    params = (id,)
     return {'sql': query, 'params': params, 'fetchone': True}
