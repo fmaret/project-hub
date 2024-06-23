@@ -8,7 +8,10 @@ from database_connection import (
     _add_role_to_user, 
     _get_project_by_id,
     _get_user_by_id,
-    _get_role_by_id
+    _get_role_by_id,
+    _get_type_by_id,
+    _create_field,
+    _get_project_cards
 )
 
 app = FastAPI()
@@ -46,6 +49,18 @@ def get_user_by_id(user_id: int):
 @app.get("/roles/{role_id}")
 def get_role_by_id(role_id: int):
     return _get_role_by_id(role_id)
+
+@app.get("/types/{type_id}")
+def get_type_by_id(type_id: int):
+    return _get_type_by_id(type_id)
+
+@app.post("/fields/create")
+def create_field(name: str, typeId: int, projectId: int):
+    return _create_field(name, typeId, projectId)
+
+@app.get("/projects/{project_id}/cards")
+def get_project_cards(project_id: int):
+    return _get_project_cards(project_id=project_id)
 
 
 app.add_middleware(

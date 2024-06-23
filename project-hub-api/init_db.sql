@@ -11,6 +11,10 @@ DROP TABLE IF EXISTS custom_types CASCADE;
 DROP TABLE IF EXISTS fields CASCADE;
 DROP TABLE IF EXISTS custom_types_elements CASCADE;
 DROP TYPE IF EXISTS custom_type_enum;
+DROP TABLE IF EXISTS card_types CASCADE;
+DROP TABLE IF EXISTS card_type_fields CASCADE;
+DROP TABLE IF EXISTS cards CASCADE;
+DROP TABLE IF EXISTS card_fields CASCADE;
 
 -- Table for users
 CREATE TABLE users (
@@ -139,5 +143,60 @@ CREATE TABLE fields (
     id SERIAL PRIMARY KEY,
     project_id INT REFERENCES projects(id),
     name VARCHAR(255),
-    custom_type_id INT REFERENCES custom_types(id)
+    custom_type_id INT REFERENCES custom_types(id),
+    default_value JSONB
 );
+
+
+INSERT INTO custom_types (type, is_optional) VALUES ('STRING', true);
+INSERT INTO custom_types (type, is_optional) VALUES ('STRING', false);
+INSERT INTO custom_types (type, is_optional) VALUES ('INTEGER', false);
+INSERT INTO custom_types (type, is_optional) VALUES ('LIST', false);
+INSERT INTO custom_types (type, is_optional) VALUES ('TUPLE', false);
+INSERT INTO custom_types_elements (custom_type_parent_id, custom_type_child_id) VALUES (4, 5);
+INSERT INTO custom_types_elements (custom_type_parent_id, custom_type_child_id, index) VALUES (5, 2, 0);
+INSERT INTO custom_types_elements (custom_type_parent_id, custom_type_child_id, index) VALUES (5, 3, 1);
+
+INSERT INTO fields (name, custom_type_id) VALUES ('description', 2);
+INSERT INTO fields (name, custom_type_id) VALUES ('title', 2);
+INSERT INTO fields (name, custom_type_id) VALUES ('assignee', 2);
+
+
+
+CREATE TABLE card_types (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50),
+    project_id INT,
+    FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+INSERT INTO card_types (project_id, name) VALUES (1, 'Ticket');
+
+CREATE TABLE card_type_fields (
+    id SERIAL PRIMARY KEY,
+    card_type_id INT,
+    field_id INT,
+    FOREIGN KEY (card_type_id) REFERENCES card_types(id),
+    FOREIGN KEY (field_id) REFERENCES fields(id)
+);
+
+INSERT INTO card_type_fields (card_type_id, field_id) VALUES (1, 1);
+INSERT INTO card_type_fields (card_type_id, field_id) VALUES (1, 2);
+INSERT INTO card_type_fields (card_type_id, field_id) VALUES (1, 3);
+
+CREATE TABLE cards (
+    id SERIAL PRIMARY KEY,
+    card_type_id INT REFERENCES card_types(id),
+    project_id INT REFERENCES projects(id)
+);
+
+INSERT INTO cards (card_type_id, project_id) VALUES (1, 1);
+
+CREATE TABLE card_fields (
+    id SERIAL PRIMARY KEY,
+    card_type_id INT REFERENCES card_types(id),
+    field_id INT REFERENCES fields(id),
+    current_value JSONB
+);
+
+INSERT INTO card_fields (card_type_id, field_id, current_value) VALUES (1, 1, '"Coucou"');
