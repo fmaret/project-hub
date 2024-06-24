@@ -7,11 +7,15 @@ from database_connection import (
     _create_role, 
     _add_role_to_user, 
     _get_project_by_id,
+    _get_user_account_roles,
     _get_user_by_id,
     _get_role_by_id,
     _get_type_by_id,
     _create_field,
-    _get_project_cards
+    _get_project_cards,
+    _edit_card,
+    _get_card_by_id,
+    validate_change_fields
 )
 
 app = FastAPI()
@@ -44,7 +48,9 @@ def get_project_by_id(project_id: int):
 
 @app.get("/users/{user_id}")
 def get_user_by_id(user_id: int):
-    return _get_user_by_id(user_id)
+    res = _get_user_account_roles(user_id)
+    res.update(_get_user_by_id(user_id))
+    return res
 
 @app.get("/roles/{role_id}")
 def get_role_by_id(role_id: int):
@@ -61,6 +67,16 @@ def create_field(name: str, typeId: int, projectId: int):
 @app.get("/projects/{project_id}/cards")
 def get_project_cards(project_id: int):
     return _get_project_cards(project_id=project_id)
+
+@app.post("/projects/{card_id}/cards")
+def edit_card(card_id: int, fields: dict):
+    card = _get_card_by_id(card_id=card_id)
+    validate_change_fields(card=card, new_fields=fields, project_id=card.get("projectId"))
+    # return _edit_card(card_id=card_id, fields=fields)
+
+@app.get("/cards/{card_id}")
+def get_card_by_id(card_id: int):
+    return _get_card_by_id(card_id=card_id)
 
 
 app.add_middleware(

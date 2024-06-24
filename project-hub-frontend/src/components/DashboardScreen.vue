@@ -1,39 +1,64 @@
 <template>
   <div class="dashboard">
-    <div class="button" @click="showCreateTicketModal = true">Créer ticket</div>
-    <CustomModal :isVisible="showCreateTicketModal" @close="showCreateTicketModal = false">
-      <h2>Créer un ticket</h2>
-      <div class="input-with-label">
-        <span>Nom</span>
-        <input type="text">
-      </div>
-      <div class="input-with-label">
-        <span>Description</span>
-        <input type="text">
-      </div>
-      <div class="input-with-label">
-        <span>Personnes assignées</span>
-        <input type="text">
-      </div>
-    </CustomModal>
-
+    <div class="button" @click="showTicketModal = true">Créer ticket</div>
+    selectedcard{{ selectedCard }}
+    <CardModal :isVisible="showTicketModal" @close="showTicketModal = false" :card="this.selectedCard"/>
+    <div>Liste des tickets</div>
+    <table v-if="cards.cards">
+      <thead>
+        <tr>
+          <th v-for="field, index in getCardsColumnsNames(cards)" :key="index">{{ field }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="card, cardIndex in cards.cards" :key="cardIndex">
+          <th v-for="field, fieldIndex in getCardColumnsValues(card)" :key="fieldIndex">{{ field }}</th>
+          <th>
+            <div class="edit-button" @click="this.selectedCardIndex = cardIndex; showTicketModal = true">
+              Editer
+            </div>
+          </th>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </template>
 
 <script>
-import CustomModal from "./CustomModal.vue";
+import CardModal from "./CardModal.vue";
+import { getCards } from "@/js/api.js"
 export default {
   name: 'DashboardScreen',
   props: {
   },
   components: {
-    CustomModal
+    CardModal
   },
   methods: {
+    async getCards() {
+      this.cards = await getCards(this.projectId);
+    },
+    getCardsColumnsNames(cards) {
+      return ["Projet", "Id de la carte", "Type de la carte", ...Object.keys(cards.cards[0].fields), "Action"];
+    },
+    getCardColumnsValues(card) {
+      return [card.projectName, card.cardId, card.cardTypeId, ...Object.values(card.fields).map(e=>e.value)]
+    }
+  },
+  mounted() {
+    this.getCards();
   },
   data: () => ({
-    showCreateTicketModal: false,
-  })
+    showTicketModal: false,
+    cards: [],
+    projectId: 1,
+    selectedCardIndex: null,
+  }),
+  computed: {
+    selectedCard() {
+      return this.selectedCardIndex != null ? this.cards.cards[this.selectedCardIndex] : null;
+    }
+  }
 }
 </script>
 
@@ -46,6 +71,14 @@ export default {
   padding: 1rem;
   margin: 1rem;
   background-color: grey;
+}
+
+.edit-button {
+  text-decoration: underline;
+}
+
+.edit-button:hover {
+  cursor: pointer;
 }
 
 .button:hover {

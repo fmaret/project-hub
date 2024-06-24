@@ -28,7 +28,6 @@ export default {
 body {
   margin: 0;
   width: 100%;
-  background-color: black;
   height: 100vh;
 }
 .window {
@@ -36,4 +35,37 @@ body {
   grid-template-columns: 20% 80%;
   height: 100%;
 }
+
+table {
+    border-collapse: collapse;
+    margin: 25px 0;
+    font-size: 0.9em;
+    font-family: sans-serif;
+    min-width: 400px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+    border: 1px solid black;
+}
+
+table thead tr {
+    background-color: darkgreen;
+    color: #ffffff;
+    text-align: left;
+}
+
+table th,
+table td {
+    padding: 12px 15px;
+    text-align: center;
+}
+
+.styled-table tbody tr {
+    border-bottom: 1px solid #dddddd;
+}
+
+table tbody tr:nth-of-type(even) {
+    background-color: #f3f3f3;
+}
+
+
+
 </style>

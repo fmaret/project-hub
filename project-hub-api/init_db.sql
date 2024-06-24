@@ -15,6 +15,9 @@ DROP TABLE IF EXISTS card_types CASCADE;
 DROP TABLE IF EXISTS card_type_fields CASCADE;
 DROP TABLE IF EXISTS cards CASCADE;
 DROP TABLE IF EXISTS card_fields CASCADE;
+DROP TABLE IF EXISTS accounts CASCADE;
+DROP TABLE IF EXISTS account_users CASCADE;
+DROP CONSTRAINT IF EXISTS card_fields_unique_constraint;
 
 -- Table for users
 CREATE TABLE users (
@@ -122,7 +125,7 @@ VALUES (
 
 
 
-CREATE TYPE custom_type_enum AS ENUM ('STRING', 'INTEGER', 'LIST', 'ENUM', 'UNION', 'TUPLE');
+CREATE TYPE custom_type_enum AS ENUM ('STRING', 'INTEGER', 'LIST', 'ENUM', 'UNION', 'TUPLE', 'MEMBER');
 
 CREATE TABLE custom_types (
     id SERIAL PRIMARY KEY,
@@ -153,13 +156,16 @@ INSERT INTO custom_types (type, is_optional) VALUES ('STRING', false);
 INSERT INTO custom_types (type, is_optional) VALUES ('INTEGER', false);
 INSERT INTO custom_types (type, is_optional) VALUES ('LIST', false);
 INSERT INTO custom_types (type, is_optional) VALUES ('TUPLE', false);
+INSERT INTO custom_types (type, is_optional) VALUES ('LIST', false);
+INSERT INTO custom_types (type, is_optional) VALUES ('MEMBER', false);
 INSERT INTO custom_types_elements (custom_type_parent_id, custom_type_child_id) VALUES (4, 5);
+INSERT INTO custom_types_elements (custom_type_parent_id, custom_type_child_id) VALUES (6, 7);
 INSERT INTO custom_types_elements (custom_type_parent_id, custom_type_child_id, index) VALUES (5, 2, 0);
 INSERT INTO custom_types_elements (custom_type_parent_id, custom_type_child_id, index) VALUES (5, 3, 1);
 
 INSERT INTO fields (name, custom_type_id) VALUES ('description', 2);
 INSERT INTO fields (name, custom_type_id) VALUES ('title', 2);
-INSERT INTO fields (name, custom_type_id) VALUES ('assignee', 2);
+INSERT INTO fields (name, custom_type_id) VALUES ('assignee', 6);
 
 
 
@@ -200,3 +206,23 @@ CREATE TABLE card_fields (
 );
 
 INSERT INTO card_fields (card_type_id, field_id, current_value) VALUES (1, 1, '"Coucou"');
+
+CREATE TABLE accounts (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE
+);
+
+CREATE TABLE account_users (
+    account_id INT REFERENCES accounts(id),
+    user_id INT REFERENCES users(id),
+    role_id INT REFERENCES roles(id),
+    PRIMARY KEY (account_id, user_id, role_id)
+);
+
+INSERT INTO accounts (name) VALUES ('Mon entreprise');
+
+INSERT INTO account_users (account_id, user_id, role_id) VALUES (1, 1, 1);
+
+
+ALTER TABLE card_fields
+ADD CONSTRAINT card_fields_unique_constraint UNIQUE (card_type_id, field_id);
