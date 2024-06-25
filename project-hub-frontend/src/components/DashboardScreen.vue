@@ -26,7 +26,7 @@
 
 <script>
 import CardModal from "./CardModal.vue";
-import { getCards } from "@/js/api.js"
+import { getCards, getProject } from "@/js/api.js"
 export default {
   name: 'DashboardScreen',
   props: {
@@ -42,16 +42,22 @@ export default {
       return ["Projet", "Id de la carte", "Type de la carte", ...Object.keys(cards.cards[0].fields), "Action"];
     },
     getCardColumnsValues(card) {
-      return [card.projectName, card.cardId, card.cardTypeId, ...Object.values(card.fields).map(e=>e.value)]
+      return [card.projectName, card.cardId, card.cardTypeId, ...Object.values(card.fields).map(e=>{
+        if (e.type == "LIST[MEMBER]") return this.project.users.filter(f=>e.value.includes(f.id)).map(g=>g.username) ;
+        else if (e.type == "MEMBER") return this.project.users.first(f=>f.id == e.value)
+        return e.value;
+      })]
     }
   },
-  mounted() {
+  async mounted() {
     this.getCards();
+    this.project = await getProject(this.projectId);
   },
   data: () => ({
     showTicketModal: false,
     cards: [],
     projectId: 1,
+    project: null,
     selectedCardIndex: null,
   }),
   computed: {

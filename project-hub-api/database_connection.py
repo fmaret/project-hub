@@ -139,7 +139,7 @@ def to_json_get_project_by_id():
                 if r[3] in usernames_list:
                     users[usernames_list.index(r[3])]["roles"].append(r[4])
                 else:
-                    users.append({"username": r[3], "roles": [r[4]]})
+                    users.append({"username": r[3], "id": r[5], "roles": [r[4]]})
             return {
                 "projectId": result[0][0],
                 "projectName": result[0][1],
@@ -229,7 +229,7 @@ def _add_role_to_user(user_id: int, project_id: int, role_id: int):
 @with_connection
 def _get_project_by_id(id: int):
     query = sql.SQL("""
-        SELECT p.id, p.name, description , u.username, r.name  FROM projects p
+        SELECT p.id, p.name, description , u.username, r.name, u.id  FROM projects p
         join user_project_roles upr on upr.project_id = p.id
         join roles r on r.id = upr.role_id 
         join users u on u.id = upr.user_id 
@@ -405,29 +405,3 @@ def _get_project_cards(project_id: int = None, card_type_id: int = None, card_id
     query = sql.SQL(query)
     params = tuple(params)
     return {'sql': query, 'params': params, 'fetchall': True}
-
-@with_connection
-def _edit_card(card_id, fields):
-    query = """
-    select c.id as card_id, c.card_type_id as card_type_id, c.project_id, ctf.field_id as field_id, f.name as field_name, default_value, cf.current_value, ct.id as field_id from cards c
-    join card_type_fields ctf on ctf.card_type_id = c.card_type_id
-    join fields f on f.id = ctf.field_id
-    left join card_fields cf on (cf.card_type_id = c.id and cf.field_id = f.id)
-    join custom_types ct on ct.id = f.custom_type_id
-    """
-    wheres = []
-    params = []
-    if project_id:
-        wheres.append("c.project_id = %s")
-        params.append(project_id)
-    if card_type_id:
-        wheres.append("c.project_id = %s")
-        params.append(card_type_id)
-    if wheres:
-        query += " where " + " and ".join(wheres) + ";"
-    else:
-        query += ";"
-    query = sql.SQL(query)
-    params = tuple(params)
-    return {'sql': query, 'params': params, 'fetchall': True}
-

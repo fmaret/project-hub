@@ -222,6 +222,8 @@ CREATE TABLE account_users (
 INSERT INTO accounts (name) VALUES ('Mon entreprise');
 
 INSERT INTO account_users (account_id, user_id, role_id) VALUES (1, 1, 1);
+INSERT INTO account_users (account_id, user_id, role_id) VALUES (1, 2, 1);
+INSERT INTO account_users (account_id, user_id, role_id) VALUES (1, 3, 2);
 
 
 ALTER TABLE card_fields

@@ -1,17 +1,21 @@
 <template>
     <CustomModal :isVisible="isVisible" @close="this.$emit('close')">
       <h2>Créer un ticket</h2>
-      <div class="input-with-label" v-for="field, index in Object.keys(card.fields)" :key="index">
-        <span>{{ field }}</span>
-        <span>{{ card.fields[field].type }}</span>
-        <CustomSelect v-if="card.fields[field].type.startsWith('LIST')"
-        :options="project.users?.map(e=>e.username)"
-        :default="'Florent'"
-        class="select"
-        />
-        <input type="text" v-else>
+      {{ newFields }}
+      <div class="grid">
+        <div class="input-with-label" v-for="field, index in Object.keys(card.fields)" :key="index">
+          <span class="field-name">{{ field }}</span>
+          <span class="field-type">{{ card.fields[field].type }}</span>
+          <CustomSelectMembers multiSelect=true v-if="card.fields[field].type.startsWith('LIST')"
+          :options="project.users?.map(e=>e.username)"
+          :returnedValues="project.users?.map(e=>e.id)"
+          class="select"
+          @input="e => getMembersSelected(field, e)"
+          />
+          <input type="text" v-model="newFields[field]" v-else>
+        </div>
       </div>
-      <div class="button" @click="editCard(card.cardId)">
+      <div class="button" @click="editCard(card.cardId, newFields)">
         Sauvegarder les modifications
       </div>
     </CustomModal>
@@ -19,11 +23,11 @@
   
   <script>
   import CustomModal from "./CustomModal.vue";
-  import CustomSelect from "./CustomSelect.vue";
+  import CustomSelectMembers from "./CustomSelect.vue";
   import { getProject, editCard } from "@/js/api.js";
   export default {
     name: 'CardModal',
-    components: {CustomModal, CustomSelect},
+    components: {CustomModal, CustomSelectMembers},
     props: {
       isVisible: {
         type: Boolean,
@@ -34,22 +38,37 @@
       }
     },
     methods: {
+      getMembersSelected(field, data) {
+        this.newFields[field] = data;
+      },
       closeModal() {
         this.$emit('close');
       },
       async getProject() {
         return await getProject(this.projectId);
       },
-      async editCard(cardId) {
-        await editCard(cardId);
+      async editCard(cardId, newFields) {
+        await editCard(cardId, newFields);
       }
     },
     data: () => ({
         projectId: 1,
         project: null,
+        newFields: {}
     }),
     async mounted() {
         this.project = await this.getProject();
+        // this.newFields = this.card.fields;
+    },
+    watch: {
+      isVisible(v) {
+        if (v) {
+          Object.keys(this.card.fields).map(key=> {
+            this.newFields[key] = this.card.fields[key].value
+          })
+          return
+        }
+      }
     }
   }
   </script>
@@ -93,6 +112,18 @@
 
   .button:hover {
     cursor: pointer;
+  }
+  .field-name {
+    padding: 1rem;
+  }
+  .field-type {
+    padding: 1rem;
+  }
+
+  .input-with-label {
+    display: grid;
+    grid-template-columns: 33% 33% 34%;
+    height: 100%;
   }
   </style>
   

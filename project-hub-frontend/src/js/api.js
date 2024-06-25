@@ -24,9 +24,14 @@ export async function getProject(projectId) {
     return project;
 }
 
-export async function editCard(cardId) {
+export async function editCard(cardId, fields) {
+    fields;
     const response = await fetch(`${url}/cards/${cardId}/edit`, {
-        method: "GET",
+        method: "POST",
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(fields)
     });
     const project = await response.json();
     return project;

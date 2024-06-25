@@ -1,3 +1,4 @@
+ 
 <template>
     <div class="custom-select" :tabindex="tabindex" @blur="open = false">
         <div class="selected" :class="{ open: open }" @click="open = !open">
@@ -7,11 +8,7 @@
         <div
             v-for="(option, i) of options"
             :key="i"
-            @click="
-            selected = option;
-            open = false;
-            $emit('input', option);
-            "
+            @click="selectOption(option, i)"
         >
             {{ option }}
         </div>
@@ -20,12 +17,17 @@
   </template>
   
   <script>
+  // default is not compatible with returnedValues
   export default {
     name: 'CustomSelect',
     props: {
         options: {
             type: Array,
             required: true,
+        },
+        returnedValues: {
+            type: Array,
+            required: false,
         },
             default: {
             type: String,
@@ -37,16 +39,33 @@
             required: false,
             default: 0,
         },
+        multiSelect: {
+            type: Boolean,
+            default: false
+          }
+
     },
     methods: {
+      selectOption(option, i) {
+        if (!this.multiSelect) {
+          this.selected = option;
+          if (this.selectedReturnedValues) this.selectedReturnedValues = this.returnedValues[i];
+        } else {
+          this.selected.includes(option) ? this.selected.pop(option) : this.selected.push(option);
+          if (this.selectedReturnedValues) this.selectedReturnedValues.includes(this.returnedValues[i]) ? this.selectedReturnedValues.pop(this.returnedValues[i]) : this.selectedReturnedValues.push(this.returnedValues[i]);
+        }
+        this.open = false;
+        this.$emit('input', this.returnedValues ? this.selectedReturnedValues : this.selected);
+      }
     },
     data: () => ({
-        selected: false,
+        selected: null,
         open: false,
+        selectedReturnedValues: []
     }),
     mounted() {
         this.$emit("input", this.selected);
-        this.selected = this.default ? this.default : this.options.length > 0 ? this.options[0] : null
+        this.selected = this.default ? this.default : this.options.length > 0 && !this.multiSelect ? this.options[0] : this.multiSelect ? [] : null
     },
   }
   </script>

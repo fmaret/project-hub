@@ -13,7 +13,6 @@ from database_connection import (
     _get_type_by_id,
     _create_field,
     _get_project_cards,
-    _edit_card,
     _get_card_by_id,
     validate_change_fields
 )
@@ -68,16 +67,15 @@ def create_field(name: str, typeId: int, projectId: int):
 def get_project_cards(project_id: int):
     return _get_project_cards(project_id=project_id)
 
-@app.post("/projects/{card_id}/cards")
+@app.post("/cards/{card_id}/edit")
 def edit_card(card_id: int, fields: dict):
     card = _get_card_by_id(card_id=card_id)
     validate_change_fields(card=card, new_fields=fields, project_id=card.get("projectId"))
-    # return _edit_card(card_id=card_id, fields=fields)
+    return _get_card_by_id(card_id=card_id)
 
 @app.get("/cards/{card_id}")
 def get_card_by_id(card_id: int):
     return _get_card_by_id(card_id=card_id)
-
 
 app.add_middleware(
     CORSMiddleware,
