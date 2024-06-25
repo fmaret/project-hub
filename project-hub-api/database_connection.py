@@ -111,6 +111,39 @@ def format_project_cards():
         return wrapper
     return decorator
 
+def format_project_card_types():
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            result = func(*args, **kwargs)
+            card_types = []
+            for r in result:
+                card_types_ids = list(map(lambda x: x.get("cardTypeId"), card_types))
+                type_id = r[5]
+                if r[0] not in card_types_ids: 
+                    card_types.append({
+                        "projectName": r[1],
+                        "projectId": r[1],
+                        "cardTypeId": r[0],
+                        "fields": {
+                            r[3]: {
+                                "value": r[4],
+                                "type": _get_type_by_id(type_id).get("type")
+                            }
+                        } 
+                    })
+                else:
+                    card_type_index = card_types_ids.index(r[0])
+                    card_types[card_type_index]["fields"][r[3]] = {
+                        "value": r[4],
+                        "type": _get_type_by_id(type_id).get("type")
+                    } 
+            return {
+                "cardTypes": card_types
+            }
+        return wrapper
+    return decorator
+
 
 def to_json_get_user_account_roles():
     def decorator(func):
@@ -376,6 +409,18 @@ def _insert_or_update_card_field(card_type_id, field_id, current_value):
     params = (card_type_id, field_id, current_value)
     return {'sql': query, 'params': params, 'fetchall': True}
 
+@format_project_card_types()
+@with_connection
+def _get_project_card_types(project_id: int):
+    query = sql.SQL("""
+    select card_types.id as card_type_id, card_types.project_id, ctf.field_id as field_id, f.name as field_name, default_value, ct.id as field_id
+    from card_types join card_type_fields ctf on ctf.card_type_id = card_types.id
+    join fields f on f.id = ctf.field_id
+    join custom_types ct on ct.id = f.custom_type_id
+    where card_types.project_id = %s;
+    """)
+    params = (project_id,)
+    return {'sql': query, 'params': params, 'fetchall': True}
 
 @format_project_cards()
 @with_connection

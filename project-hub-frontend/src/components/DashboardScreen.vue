@@ -1,8 +1,14 @@
 <template>
   <div class="dashboard">
-    <div class="button" @click="showTicketModal = true">Créer ticket</div>
+    <div class="button" @click="showTicketModal = true; createTicket = true;">Créer ticket</div>
     selectedcard{{ selectedCard }}
-    <CardModal :isVisible="showTicketModal" @close="showTicketModal = false" :card="this.selectedCard"/>
+    <CardModal
+    :isVisible="showTicketModal"
+    :card="this.selectedCard"
+    :createTicket = "createTicket"
+    @close="showTicketModal = false; createTicket = false" 
+    @card-updated="showTicketModal = false; getCards(); createTicket = false;"
+    />
     <div>Liste des tickets</div>
     <table v-if="cards.cards">
       <thead>
@@ -54,6 +60,7 @@ export default {
     this.project = await getProject(this.projectId);
   },
   data: () => ({
+    createTicket: false,
     showTicketModal: false,
     cards: [],
     projectId: 1,

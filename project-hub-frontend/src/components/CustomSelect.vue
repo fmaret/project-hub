@@ -49,10 +49,10 @@
       selectOption(option, i) {
         if (!this.multiSelect) {
           this.selected = option;
-          if (this.selectedReturnedValues) this.selectedReturnedValues = this.returnedValues[i];
+          if (this.selectedReturnedValues.length > 0) this.selectedReturnedValues = this.returnedValues[i];
         } else {
           this.selected.includes(option) ? this.selected.pop(option) : this.selected.push(option);
-          if (this.selectedReturnedValues) this.selectedReturnedValues.includes(this.returnedValues[i]) ? this.selectedReturnedValues.pop(this.returnedValues[i]) : this.selectedReturnedValues.push(this.returnedValues[i]);
+          if (this.selectedReturnedValues.length > 0) this.selectedReturnedValues.includes(this.returnedValues[i]) ? this.selectedReturnedValues.pop(this.returnedValues[i]) : this.selectedReturnedValues.push(this.returnedValues[i]);
         }
         this.open = false;
         this.$emit('input', this.returnedValues ? this.selectedReturnedValues : this.selected);
@@ -65,7 +65,13 @@
     }),
     mounted() {
         this.$emit("input", this.selected);
-        this.selected = this.default ? this.default : this.options.length > 0 && !this.multiSelect ? this.options[0] : this.multiSelect ? [] : null
+        this.selected = this.default ? this.default : this.options.length > 0 && !this.multiSelect ? this.options[0] : this.multiSelect ? [] : null;
+    },  
+    watch: {
+      options() {
+        this.$emit("input", this.selected);
+        this.selected = this.default ? this.default : this.options.length > 0 && !this.multiSelect ? this.options[0] : this.multiSelect ? [] : null;
+      }
     },
   }
   </script>

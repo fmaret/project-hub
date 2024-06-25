@@ -14,7 +14,8 @@ from database_connection import (
     _create_field,
     _get_project_cards,
     _get_card_by_id,
-    validate_change_fields
+    validate_change_fields,
+    _get_project_card_types
 )
 
 app = FastAPI()
@@ -76,6 +77,10 @@ def edit_card(card_id: int, fields: dict):
 @app.get("/cards/{card_id}")
 def get_card_by_id(card_id: int):
     return _get_card_by_id(card_id=card_id)
+
+@app.get("/projects/{project_id}/cards/types")
+def get_card_by_id(project_id: int):
+    return _get_project_card_types(project_id=project_id)
 
 app.add_middleware(
     CORSMiddleware,

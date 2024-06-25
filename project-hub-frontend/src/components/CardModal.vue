@@ -1,12 +1,13 @@
 <template>
     <CustomModal :isVisible="isVisible" @close="this.$emit('close')">
-      <h2>Créer un ticket</h2>
+      <h2 v-if="createTicket">Créer un ticket</h2>
+      <h2 v-else>Edition du ticket</h2>
       {{ newFields }}
-      <div class="grid">
+      <div class="grid" v-if="!createTicket">
         <div class="input-with-label" v-for="field, index in Object.keys(card.fields)" :key="index">
           <span class="field-name">{{ field }}</span>
           <span class="field-type">{{ card.fields[field].type }}</span>
-          <CustomSelectMembers multiSelect=true v-if="card.fields[field].type.startsWith('LIST')"
+          <CustomSelect multiSelect=true v-if="card.fields[field].type.startsWith('LIST')"
           :options="project.users?.map(e=>e.username)"
           :returnedValues="project.users?.map(e=>e.id)"
           class="select"
@@ -15,7 +16,20 @@
           <input type="text" v-model="newFields[field]" v-else>
         </div>
       </div>
-      <div class="button" @click="editCard(card.cardId, newFields)">
+      <div v-else>
+        <div class="input-with-label">
+          <span class="field-name">Type de carte</span>
+          <CustomSelect
+          :options="cardTypes.map(e=>e.cardTypeId)"
+          class="select"
+          />
+        </div>
+      </div>
+
+      <div v-if="createTicket" class="button" @click="editCard(card.cardId, newFields)">
+        Créer le ticket
+      </div>
+      <div v-else class="button" @click="editCard(card.cardId, newFields)">
         Sauvegarder les modifications
       </div>
     </CustomModal>
@@ -23,11 +37,12 @@
   
   <script>
   import CustomModal from "./CustomModal.vue";
-  import CustomSelectMembers from "./CustomSelect.vue";
-  import { getProject, editCard } from "@/js/api.js";
+  import CustomSelect from "./CustomSelect.vue";
+
+  import { getProject, editCard, getCardTypes } from "@/js/api.js";
   export default {
     name: 'CardModal',
-    components: {CustomModal, CustomSelectMembers},
+    components: {CustomModal, CustomSelect},
     props: {
       isVisible: {
         type: Boolean,
@@ -35,6 +50,11 @@
       },
       card: {
         required: true
+      },
+      createTicket: {
+        type: Boolean,
+        required: false,
+        default: false
       }
     },
     methods: {
@@ -49,20 +69,24 @@
       },
       async editCard(cardId, newFields) {
         await editCard(cardId, newFields);
+        this.$emit("card-updated");
       }
     },
     data: () => ({
         projectId: 1,
         project: null,
-        newFields: {}
+        newFields: {},
+        cardTypes: []
     }),
     async mounted() {
         this.project = await this.getProject();
         // this.newFields = this.card.fields;
     },
     watch: {
-      isVisible(v) {
-        if (v) {
+      async isVisible(v) {
+        this.newFields = {};
+        if (v && this.createTicket) this.cardTypes = (await getCardTypes(this.projectId)).cardTypes;
+        if (v && !this.createTicket) {
           Object.keys(this.card.fields).map(key=> {
             this.newFields[key] = this.card.fields[key].value
           })
@@ -88,8 +112,9 @@
   
   .modal-content {
     background: white;
-    padding: 20px;
-    border-radius: 5px;
+    padding: 4rem;
+    border-radius: 0.5rem;
+    width:80%;
     position: relative;
   }
   

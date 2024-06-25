@@ -37,3 +37,10 @@ export async function editCard(cardId, fields) {
     return project;
 }
 
+export async function getCardTypes(projectId) {
+    const response = await fetch(`${url}/projects/${projectId}/cards/types`, {
+        method: "GET",
+    });
+    const cardTypes = await response.json();
+    return cardTypes;
+}
