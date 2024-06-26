@@ -136,7 +136,7 @@ CREATE TABLE custom_types (
 CREATE TABLE custom_types_elements (
     id SERIAL PRIMARY KEY,
     custom_type_parent_id INT REFERENCES custom_types(id) NOT NULL,
-    custom_type_child_id INT REFERENCES custom_types(id) NOT NULL,
+    custom_type_child_id INT REFERENCES custom_types(id),
     index INT,
     value VARCHAR(50)
 
@@ -165,7 +165,7 @@ INSERT INTO custom_types_elements (custom_type_parent_id, custom_type_child_id, 
 
 INSERT INTO fields (name, custom_type_id) VALUES ('description', 2);
 INSERT INTO fields (name, custom_type_id) VALUES ('title', 2);
-INSERT INTO fields (name, custom_type_id) VALUES ('assignee', 6);
+INSERT INTO fields (name, custom_type_id) VALUES ('assignees', 6);
 
 
 
@@ -228,3 +228,23 @@ INSERT INTO account_users (account_id, user_id, role_id) VALUES (1, 3, 2);
 
 ALTER TABLE card_fields
 ADD CONSTRAINT card_fields_unique_constraint UNIQUE (card_id, field_id);
+
+INSERT INTO custom_types (type, is_optional) VALUES ('ENUM', false);
+INSERT INTO custom_types_elements (custom_type_parent_id, value) VALUES (8, '2024-01');
+INSERT INTO custom_types_elements (custom_type_parent_id, value) VALUES (8, '2024-02');
+INSERT INTO custom_types_elements (custom_type_parent_id, value) VALUES (8, '2024-03');
+INSERT INTO custom_types_elements (custom_type_parent_id, value) VALUES (8, '2024-04');
+INSERT INTO custom_types_elements (custom_type_parent_id, value) VALUES (8, '2024-05');
+INSERT INTO custom_types_elements (custom_type_parent_id, value) VALUES (8, '2024-06');
+INSERT INTO custom_types_elements (custom_type_parent_id, value) VALUES (8, '2024-07');
+INSERT INTO custom_types_elements (custom_type_parent_id, value) VALUES (8, '2024-08');
+INSERT INTO custom_types_elements (custom_type_parent_id, value) VALUES (8, '2024-09');
+INSERT INTO custom_types_elements (custom_type_parent_id, value) VALUES (8, '2024-10');
+INSERT INTO custom_types_elements (custom_type_parent_id, value) VALUES (8, '2024-11');
+INSERT INTO custom_types_elements (custom_type_parent_id, value) VALUES (8, '2024-12');
+
+INSERT INTO custom_types (type, is_optional) VALUES ('LIST', false);
+INSERT INTO custom_types_elements (custom_type_parent_id, custom_type_child_id) VALUES (9, 8);
+
+INSERT INTO fields (name, custom_type_id) VALUES ('sprint', 9);
+INSERT INTO card_type_fields (card_type_id, field_id) VALUES (1, 4);

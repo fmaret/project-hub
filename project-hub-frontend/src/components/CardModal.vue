@@ -6,11 +6,17 @@
         <div class="input-with-label" v-for="field, index in Object.keys(card.fields)" :key="index">
           <span class="field-name">{{ field }}</span>
           <span class="field-type">{{ card.fields[field].type }}</span>
-          <CustomSelect multiSelect=true v-if="card.fields[field].type.startsWith('LIST')"
+          <CustomSelect :multiSelect="card.fields[field].type.startsWith('LIST')" v-if="/MEMBER/.test(card.fields[field].type)"
           :options="project.users?.map(e=>e.username)"
           :returnedValues="project.users?.map(e=>e.id)"
           class="select"
           @input="e => getMembersSelected(field, e)"
+          />
+          <CustomSelect :multiSelect="card.fields[field].type.startsWith('LIST')" v-else-if="/ENUM/.test(card.fields[field].type)"
+          :options="getCardEnumOptions(card, field)"
+          :returnedValues="card.fields[field].values"
+          class="select"
+          @input="e => e"
           />
           <input type="text" v-model="newFields[field]" v-else>
         </div>
@@ -72,12 +78,13 @@
       }
     },
     methods: {
+      getCardEnumOptions(card, field) {
+        return card.fields[field].values[card.fields[field].type.substring(card.fields[field].type.indexOf('ENUM_')+'ENUM_'.length, card.fields[field].type.indexOf('ENUM_')+'ENUM_'.length+1)];
+      },
       changeSelectedCardType(e) {
         this.selectedCardTypeId = e; 
-        console.log('coucou j\'ai changé', e, this.selectedCardTypeId)
       },
       getMembersSelected(field, data) {
-        console.log("adad", data, field)
         this.newFields[field] = data;
       },
       closeModal() {
@@ -120,8 +127,6 @@
     },
     computed: {
       cardTypeFields() {
-        console.log("aaa", this.cardTypes, "bb", this.selectedCardTypeId);
-        console.log("cc", this.cardTypes, this.selectedCardTypeId);
         return this.cardTypes && this.selectedCardTypeId ? this.cardTypes.filter(e=>e.cardTypeId == this.selectedCardTypeId)[0].fields : {};
       }
     }

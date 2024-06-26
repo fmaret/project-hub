@@ -1,3 +1,4 @@
+import copy
 import functools
 import json
 import time
@@ -50,29 +51,38 @@ def to_json_get_user_by_id():
 
 BASE_TYPES = ["STRING", "INTEGER", "MEMBER"]
 
-def recurse_format_type(types, id):
+def recurse_format_type(types, id, values: dict = {}):
         first_type = list(filter(lambda x: x[0] == id, types))[0]
         type_name = first_type[1]
         if type_name in BASE_TYPES:
             if first_type[2]:
-                return f"OPTIONAL[{type_name}]"
+                return f"OPTIONAL[{type_name}]", values
             else:
-                return type_name
+                return type_name, values
         elif type_name == "LIST":
-            return f"LIST[{recurse_format_type(types, first_type[3])}]"
+            res = recurse_format_type(types, first_type[3])
+            values.update(res[1])
+            return f"LIST[{res[0]}]", values
         elif type_name == "TUPLE":
             tuple_elements = list(filter(lambda x: x[0] == id, types))
             tuple_elements.sort(key=lambda x: x[4])
-            return f"({','.join(map(lambda x: recurse_format_type(types, x[3]), tuple_elements))})"
+            return f"({','.join(map(lambda x: recurse_format_type(types, x[3])[0], tuple_elements))})", values
+        elif type_name == "ENUM":
+            enum_values = list(map(lambda y: y[5], filter(lambda x: x[0] == id, types)))
+            values.update({id: enum_values})
+            return f"ENUM_{id}", values
+
 
 def format_output_type_get_type_by_id():
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             result = func(*args, **kwargs)
+            res = recurse_format_type(result, result[0][0], values = {})
             return {
                 "id": result[0][0],
-                "type": recurse_format_type(result, result[0][0])
+                "type": res[0],
+                "values": res[1]
             }
         return wrapper
     return decorator
@@ -89,10 +99,13 @@ def format_project_cards():
                 cards_ids = list(map(lambda x: x.get("cardId"), cards))
                 type_id = r[7]
                 if type_id in types_memory:
-                    type_name = types_memory[type_id]
+                    type_name = types_memory[type_id].get("type")
+                    type_values = copy.deepcopy(types_memory[type_id].get("values"))
                 else:
-                    type_name = _get_type_by_id(type_id).get("type")
-                    types_memory[type_id] = type_name
+                    type_obj = _get_type_by_id(type_id)
+                    type_name = type_obj.get("type")
+                    type_values = type_obj.get("values")
+                    types_memory[type_id] = type_obj
                 if r[0] not in cards_ids: 
                     cards.append({
                         "projectName": r[2],
@@ -102,7 +115,8 @@ def format_project_cards():
                         "fields": {
                             r[4]: {
                                 "value": r[6] if r[6] else r[5],
-                                "type": type_name
+                                "type": type_name,
+                                "values": copy.deepcopy(type_values)
                             }
                         } 
                     })
@@ -110,9 +124,9 @@ def format_project_cards():
                     card_index = cards_ids.index(r[0])
                     cards[card_index]["fields"][r[4]] = {
                         "value": r[6] if r[6] else r[5],
-                        "type": type_name
+                        "type": type_name,
+                        "values": copy.deepcopy(type_values)
                     } 
-            print("time project cards", time.time()-t)
             return {
                 "cards": cards
             }
@@ -231,7 +245,6 @@ def with_connection(func):
             return None
         finally:
             conn.close()
-            print("time", time.time() - t)
     return wrapper
 
 @with_connection
@@ -337,17 +350,17 @@ def _get_role_by_id(id: int):
 def _get_type_by_id(id: int):
     query = sql.SQL("""
     WITH RECURSIVE type_hierarchy AS (
-        SELECT c.id, c.type, c.is_optional, cte.custom_type_child_id, cte.index
+        SELECT c.id, c.type, c.is_optional, cte.custom_type_child_id, cte.index, cte.value
         FROM custom_types c
         LEFT join custom_types_elements cte ON cte.custom_type_parent_id = c.id
         WHERE c.id = %s
         UNION ALL
-        SELECT c.id, c.type, c.is_optional, cte.custom_type_child_id, cte.index
+        SELECT c.id, c.type, c.is_optional, cte.custom_type_child_id, cte.index, cte.value
         FROM custom_types c
         LEFT join custom_types_elements cte ON cte.custom_type_parent_id = c.id
         join type_hierarchy th ON th.custom_type_child_id = c.id
     )
-    SELECT id, type, is_optional, custom_type_child_id, index from type_hierarchy;
+    SELECT id, type, is_optional, custom_type_child_id, index, value from type_hierarchy;
     """)
     params = (id,)
     return {'sql': query, 'params': params, 'fetchall': True}
@@ -363,6 +376,7 @@ def _get_card_by_id(card_id: int):
     return _get_project_cards(card_id=card_id)
 
 def validate_card_field_type(card, field_name, field_type, field_value, project_id, insert=False):
+    print("coucoudebut", field_type, field_value, card)
     if field_type == "STRING":
         if type(field_value) == str:
             if insert:
@@ -380,6 +394,9 @@ def validate_card_field_type(card, field_name, field_type, field_value, project_
         user = _get_user_by_id(field_value)
         project = _get_project_by_id(project_id)
         return project.get("projectName") in list(map(lambda x: x.get("name"), user.get("projects")))
+    elif field_type.startswith("ENUM"):
+        enum_id = int(field_type.split("_")[1])
+        return field_value in card.get("fields").get(field_name).get("values").get(enum_id)
 
 def validate_card_type_field_type(card_type, field_name, field_type, field_value, project_id, insert=False):
     if field_type == "STRING":
@@ -408,7 +425,6 @@ def validate_change_card_fields(card, new_fields, project_id):
     return
 
 def validate_change_card_type_fields(card_type, new_fields, project_id):
-    print("azeaze", card_type)
     for k, v in card_type.get("fields").items():
         if k in new_fields:
             validate_card_field_type(card_type=card_type, field_name=k, field_type=v.get("type"), field_value=new_fields[k], project_id=project_id, insert=True)

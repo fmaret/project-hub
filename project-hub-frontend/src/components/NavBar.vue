@@ -41,8 +41,12 @@ export default {
   padding: 1rem;
 }
 .nav-bar-button {
-  background-color: grey;
+  background-color: lightgray;
   padding: 1rem;
   margin: 1rem;
+}
+
+.nav-bar-button:hover {
+  cursor: pointer;
 }
 </style>
