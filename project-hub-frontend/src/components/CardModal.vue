@@ -2,7 +2,6 @@
     <CustomModal :isVisible="isVisible" @close="this.$emit('close')">
       <h2 v-if="createTicket">Créer un ticket</h2>
       <h2 v-else>Edition du ticket</h2>
-      {{ newFields }}
       <div class="grid" v-if="!createTicket">
         <div class="input-with-label" v-for="field, index in Object.keys(card.fields)" :key="index">
           <span class="field-name">{{ field }}</span>
@@ -20,13 +19,28 @@
         <div class="input-with-label">
           <span class="field-name">Type de carte</span>
           <CustomSelect
-          :options="cardTypes.map(e=>e.cardTypeId)"
+          :options="cardTypes.map(e=>e.cardType)"
+          :returnedValues="cardTypes.map(e=>e.cardTypeId)"
           class="select"
+          @input="changeSelectedCardType"
           />
+        </div>
+        <div class="grid" v-if="createTicket">
+          <div class="input-with-label" v-for="field, index in Object.keys(this.cardTypeFields)" :key="index">
+            <span class="field-name">{{ field }}</span>
+            <span class="field-type">{{ this.cardTypeFields[field].type }}</span>
+            <CustomSelect multiSelect=true v-if="this.cardTypeFields[field].type.startsWith('LIST')"
+            :options="project.users?.map(e=>e.username)"
+            :returnedValues="project.users?.map(e=>e.id)"
+            class="select"
+            @input="e => getMembersSelected(field, e)"
+            />
+            <input type="text" v-model="newFields[field]" v-else>
+          </div>
         </div>
       </div>
 
-      <div v-if="createTicket" class="button" @click="editCard(card.cardId, newFields)">
+      <div v-if="createTicket" class="button" @click="createCard(newFields)">
         Créer le ticket
       </div>
       <div v-else class="button" @click="editCard(card.cardId, newFields)">
@@ -39,7 +53,7 @@
   import CustomModal from "./CustomModal.vue";
   import CustomSelect from "./CustomSelect.vue";
 
-  import { getProject, editCard, getCardTypes } from "@/js/api.js";
+  import { getProject, editCard, getCardTypes, createCard } from "@/js/api.js";
   export default {
     name: 'CardModal',
     components: {CustomModal, CustomSelect},
@@ -58,7 +72,12 @@
       }
     },
     methods: {
+      changeSelectedCardType(e) {
+        this.selectedCardTypeId = e; 
+        console.log('coucou j\'ai changé', e, this.selectedCardTypeId)
+      },
       getMembersSelected(field, data) {
+        console.log("adad", data, field)
         this.newFields[field] = data;
       },
       closeModal() {
@@ -70,13 +89,18 @@
       async editCard(cardId, newFields) {
         await editCard(cardId, newFields);
         this.$emit("card-updated");
+      },
+      async createCard(newFields) {
+        await createCard(newFields);
+        this.$emit("card-updated");
       }
     },
     data: () => ({
         projectId: 1,
         project: null,
         newFields: {},
-        cardTypes: []
+        cardTypes: [],
+        selectedCardTypeId: null,
     }),
     async mounted() {
         this.project = await this.getProject();
@@ -92,6 +116,13 @@
           })
           return
         }
+      }
+    },
+    computed: {
+      cardTypeFields() {
+        console.log("aaa", this.cardTypes, "bb", this.selectedCardTypeId);
+        console.log("cc", this.cardTypes, this.selectedCardTypeId);
+        return this.cardTypes && this.selectedCardTypeId ? this.cardTypes.filter(e=>e.cardTypeId == this.selectedCardTypeId)[0].fields : {};
       }
     }
   }

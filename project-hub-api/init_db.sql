@@ -200,12 +200,12 @@ INSERT INTO cards (card_type_id, project_id) VALUES (1, 1);
 
 CREATE TABLE card_fields (
     id SERIAL PRIMARY KEY,
-    card_type_id INT REFERENCES card_types(id),
+    card_id INT REFERENCES cards(id),
     field_id INT REFERENCES fields(id),
     current_value JSONB
 );
 
-INSERT INTO card_fields (card_type_id, field_id, current_value) VALUES (1, 1, '"Coucou"');
+INSERT INTO card_fields (card_id, field_id, current_value) VALUES (1, 1, '"Coucou"');
 
 CREATE TABLE accounts (
     id SERIAL PRIMARY KEY,
@@ -227,4 +227,4 @@ INSERT INTO account_users (account_id, user_id, role_id) VALUES (1, 3, 2);
 
 
 ALTER TABLE card_fields
-ADD CONSTRAINT card_fields_unique_constraint UNIQUE (card_type_id, field_id);
+ADD CONSTRAINT card_fields_unique_constraint UNIQUE (card_id, field_id);

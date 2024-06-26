@@ -49,7 +49,7 @@ export default {
     },
     getCardColumnsValues(card) {
       return [card.projectName, card.cardId, card.cardTypeId, ...Object.values(card.fields).map(e=>{
-        if (e.type == "LIST[MEMBER]") return this.project.users.filter(f=>e.value.includes(f.id)).map(g=>g.username) ;
+        if (e.type == "LIST[MEMBER]" && e.value) return this.project.users.filter(f=>e.value.includes(f.id)).map(g=>g.username) ;
         else if (e.type == "MEMBER") return this.project.users.first(f=>f.id == e.value)
         return e.value;
       })]

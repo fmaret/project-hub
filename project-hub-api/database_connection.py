@@ -1,5 +1,6 @@
 import functools
 import json
+import time
 import psycopg2
 from psycopg2 import sql
 
@@ -85,7 +86,6 @@ def format_project_cards():
             for r in result:
                 cards_ids = list(map(lambda x: x.get("cardId"), cards))
                 type_id = r[7]
-                print("azeaze", r[7])
                 if r[0] not in cards_ids: 
                     cards.append({
                         "projectName": r[2],
@@ -125,6 +125,7 @@ def format_project_card_types():
                         "projectName": r[1],
                         "projectId": r[1],
                         "cardTypeId": r[0],
+                        "cardType": r[6],
                         "fields": {
                             r[3]: {
                                 "value": r[4],
@@ -193,6 +194,7 @@ def to_json_get_card_by_id():
 def with_connection(func):
     def wrapper(*args, **kwargs):
         try:
+            t = time.time()
             conn = psycopg2.connect(
                 dbname=DB_NAME,
                 user=DB_USER,
@@ -200,13 +202,10 @@ def with_connection(func):
                 host=DB_HOST,
                 port=DB_PORT
             )
-            print("Connection to the database established successfully.")
             query_data = func(*args, **kwargs)
             with conn.cursor() as cur:
                 a = cur.execute(query_data['sql'], query_data['params'])
-                print("aa", a)
                 conn.commit()
-                print(query_data.get('fetchone'))
                 if query_data.get('fetchone'):
                     r = cur.fetchone()
                     if len(r) == 1:
@@ -217,7 +216,6 @@ def with_connection(func):
                     result = cur.fetchall()
                 else:
                     conn.commit()
-            print("before result", result)
             return result
         except psycopg2.Error as e:
             print(f"Error executing the query: {e}")
@@ -225,7 +223,7 @@ def with_connection(func):
             return None
         finally:
             conn.close()
-            print("Connection to the database closed.")
+            print("time", time.time() - t)
     return wrapper
 
 @with_connection
@@ -348,45 +346,28 @@ def _get_type_by_id(id: int):
 
 @with_connection
 def _create_field(name: str, type_id: int, project_id: int):
-    print("aze1")
     query = sql.SQL("INSERT INTO fields (project_id, name, custom_type_id) VALUES (%s, %s, %s) RETURNING id")
     params = (project_id, name, type_id)
-    print("aze2")
     return {'sql': query, 'params': params, 'fetchone': True}
-
-# @with_connection
-# def _create_card_type():
-#     query = sql.SQL("INSERT INTO fields (project_id, name, custom_type_id) VALUES (%s, %s, %s) RETURNING id")
-#     params = (project_id, name, type_id)
-#     print("aze2")
-#     return {'sql': query, 'params': params, 'fetchone': True}
-
-# @with_connection
-# def _create_card(card_type_id: int):
-#     query = sql.SQL("INSERT INTO fields (project_id, name, custom_type_id) VALUES (%s, %s, %s) RETURNING id")
-#     params = (project_id, name, type_id)
-#     print("aze2")
-#     return {'sql': query, 'params': params, 'fetchone': True}
 
 @to_json_get_card_by_id()
 def _get_card_by_id(card_id: int):
     return _get_project_cards(card_id=card_id)
 
 def validate_field_type(card, field_name, field_type, field_value, project_id, insert=False):
-    print("field type", field_type, "field value", field_value)
     if field_type == "STRING":
         if type(field_value) == str:
             if insert:
-                _insert_or_update_card_field(card.get("cardTypeId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=f"\"{field_value}\"")
+                _insert_or_update_card_field(card.get("cardId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=f"\"{field_value}\"")
     elif field_type == "INTEGER":
         if type(field_value) == int:
             if insert:
-                _insert_or_update_card_field(card.get("cardTypeId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=field_value)
+                _insert_or_update_card_field(card.get("cardId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=field_value)
     elif field_type.startswith("LIST"):
         list_type = field_type[5:-1]
         if type(field_value) == list and all([validate_field_type(card=card, field_name=field_name, field_type=list_type, field_value=v, project_id=project_id) for v in field_value]):
             if insert:
-                _insert_or_update_card_field(card.get("cardTypeId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=f"\"{field_value}\"")
+                _insert_or_update_card_field(card.get("cardId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=f"\"{field_value}\"")
     elif field_type == "MEMBER":
         user = _get_user_by_id(field_value)
         project = _get_project_by_id(project_id)
@@ -399,21 +380,21 @@ def validate_change_fields(card, new_fields, project_id):
     return
 
 @with_connection
-def _insert_or_update_card_field(card_type_id, field_id, current_value):
+def _insert_or_update_card_field(card_id, field_id, current_value):
     query = sql.SQL("""
-    INSERT INTO card_fields (card_type_id, field_id, current_value)
+    INSERT INTO card_fields (card_id, field_id, current_value)
     SELECT %s, %s, %s
-    ON CONFLICT (card_type_id, field_id)
+    ON CONFLICT (card_id, field_id)
     DO UPDATE SET current_value = EXCLUDED.current_value;
     """)
-    params = (card_type_id, field_id, current_value)
+    params = (card_id, field_id, current_value)
     return {'sql': query, 'params': params, 'fetchall': True}
 
 @format_project_card_types()
 @with_connection
 def _get_project_card_types(project_id: int):
     query = sql.SQL("""
-    select card_types.id as card_type_id, card_types.project_id, ctf.field_id as field_id, f.name as field_name, default_value, ct.id as field_id
+    select card_types.id as card_type_id, card_types.project_id, ctf.field_id as field_id, f.name as field_name, default_value, ct.id as field_id, card_types.name as card_type_name
     from card_types join card_type_fields ctf on ctf.card_type_id = card_types.id
     join fields f on f.id = ctf.field_id
     join custom_types ct on ct.id = f.custom_type_id
@@ -422,6 +403,28 @@ def _get_project_card_types(project_id: int):
     params = (project_id,)
     return {'sql': query, 'params': params, 'fetchall': True}
 
+@format_project_card_types()
+@with_connection
+def _get_card_type_by_id(card_type_id: int):
+    query = sql.SQL("""
+    select card_types.id as card_type_id, card_types.project_id, ctf.field_id as field_id, f.name as field_name, default_value, ct.id as field_id, card_types.name as card_type_name
+    from card_types join card_type_fields ctf on ctf.card_type_id = card_types.id
+    join fields f on f.id = ctf.field_id
+    join custom_types ct on ct.id = f.custom_type_id
+    where card_types.id = %s;
+    """)
+    params = (card_type_id,)
+    return {'sql': query, 'params': params, 'fetchall': True}
+
+@with_connection
+def _create_card(project_id: int, card_type_id: int):
+    query = sql.SQL("""
+    insert into cards (card_type_id, project_id) values (%s, %s) returning id
+    """)
+    params = (card_type_id, project_id)
+    return {'sql': query, 'params': params, 'fetchone': True}
+
+
 @format_project_cards()
 @with_connection
 def _get_project_cards(project_id: int = None, card_type_id: int = None, card_id: int = None):
@@ -429,7 +432,7 @@ def _get_project_cards(project_id: int = None, card_type_id: int = None, card_id
     select c.id as card_id, c.card_type_id as card_type_id, c.project_id, ctf.field_id as field_id, f.name as field_name, default_value, cf.current_value, ct.id as field_id from cards c
     join card_type_fields ctf on ctf.card_type_id = c.card_type_id
     join fields f on f.id = ctf.field_id
-    left join card_fields cf on (cf.card_type_id = c.id and cf.field_id = f.id)
+    left join card_fields cf on (cf.card_id = c.id and cf.field_id = f.id)
     join custom_types ct on ct.id = f.custom_type_id
     """
     wheres = []
