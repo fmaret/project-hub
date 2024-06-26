@@ -38,7 +38,7 @@ export async function editCard(cardId, fields) {
 }
 
 export async function getCardTypes(projectId) {
-    const response = await fetch(`${url}/projects/${projectId}/cards/types`, {
+    const response = await fetch(`${url}/projects/${projectId}/card-types`, {
         method: "GET",
     });
     const cardTypes = await response.json();

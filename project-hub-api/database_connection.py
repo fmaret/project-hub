@@ -81,11 +81,18 @@ def format_project_cards():
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            t = time.time()
             result = func(*args, **kwargs)
             cards = []
+            types_memory = {}
             for r in result:
                 cards_ids = list(map(lambda x: x.get("cardId"), cards))
                 type_id = r[7]
+                if type_id in types_memory:
+                    type_name = types_memory[type_id]
+                else:
+                    type_name = _get_type_by_id(type_id).get("type")
+                    types_memory[type_id] = type_name
                 if r[0] not in cards_ids: 
                     cards.append({
                         "projectName": r[2],
@@ -95,7 +102,7 @@ def format_project_cards():
                         "fields": {
                             r[4]: {
                                 "value": r[6] if r[6] else r[5],
-                                "type": _get_type_by_id(type_id).get("type")
+                                "type": type_name
                             }
                         } 
                     })
@@ -103,15 +110,16 @@ def format_project_cards():
                     card_index = cards_ids.index(r[0])
                     cards[card_index]["fields"][r[4]] = {
                         "value": r[6] if r[6] else r[5],
-                        "type": _get_type_by_id(type_id).get("type")
+                        "type": type_name
                     } 
+            print("time project cards", time.time()-t)
             return {
                 "cards": cards
             }
         return wrapper
     return decorator
 
-def format_project_card_types():
+def format_project_card_types(fetchone=False):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -141,7 +149,7 @@ def format_project_card_types():
                     } 
             return {
                 "cardTypes": card_types
-            }
+            } if not fetchone else card_types[0]
         return wrapper
     return decorator
 
@@ -354,7 +362,7 @@ def _create_field(name: str, type_id: int, project_id: int):
 def _get_card_by_id(card_id: int):
     return _get_project_cards(card_id=card_id)
 
-def validate_field_type(card, field_name, field_type, field_value, project_id, insert=False):
+def validate_card_field_type(card, field_name, field_type, field_value, project_id, insert=False):
     if field_type == "STRING":
         if type(field_value) == str:
             if insert:
@@ -365,7 +373,7 @@ def validate_field_type(card, field_name, field_type, field_value, project_id, i
                 _insert_or_update_card_field(card.get("cardId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=field_value)
     elif field_type.startswith("LIST"):
         list_type = field_type[5:-1]
-        if type(field_value) == list and all([validate_field_type(card=card, field_name=field_name, field_type=list_type, field_value=v, project_id=project_id) for v in field_value]):
+        if type(field_value) == list and all([validate_card_field_type(card=card, field_name=field_name, field_type=list_type, field_value=v, project_id=project_id) for v in field_value]):
             if insert:
                 _insert_or_update_card_field(card.get("cardId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=f"\"{field_value}\"")
     elif field_type == "MEMBER":
@@ -373,10 +381,37 @@ def validate_field_type(card, field_name, field_type, field_value, project_id, i
         project = _get_project_by_id(project_id)
         return project.get("projectName") in list(map(lambda x: x.get("name"), user.get("projects")))
 
-def validate_change_fields(card, new_fields, project_id):
+def validate_card_type_field_type(card_type, field_name, field_type, field_value, project_id, insert=False):
+    if field_type == "STRING":
+        if type(field_value) == str:
+            if insert:
+                _insert_or_update_card_type_field(card_type.get("cardTypeId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=f"\"{field_value}\"")
+    elif field_type == "INTEGER":
+        if type(field_value) == int:
+            if insert:
+                _insert_or_update_card_type_field(card_type.get("cardTypeId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=field_value)
+    elif field_type.startswith("LIST"):
+        list_type = field_type[5:-1]
+        if type(field_value) == list and all([validate_card_field_type(card_type=card_type, field_name=field_name, field_type=list_type, field_value=v, project_id=project_id) for v in field_value]):
+            if insert:
+                _insert_or_update_card_type_field(card_type.get("cardTypeId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=f"\"{field_value}\"")
+    elif field_type == "MEMBER":
+        user = _get_user_by_id(field_value)
+        project = _get_project_by_id(project_id)
+        return project.get("projectName") in list(map(lambda x: x.get("name"), user.get("projects")))
+
+
+def validate_change_card_fields(card, new_fields, project_id):
     for k, v in card.get("fields").items():
         if k in new_fields:
-            validate_field_type(card=card, field_name=k, field_type=v.get("type"), field_value=new_fields[k], project_id=project_id, insert=True)
+            validate_card_field_type(card=card, field_name=k, field_type=v.get("type"), field_value=new_fields[k], project_id=project_id, insert=True)
+    return
+
+def validate_change_card_type_fields(card_type, new_fields, project_id):
+    print("azeaze", card_type)
+    for k, v in card_type.get("fields").items():
+        if k in new_fields:
+            validate_card_field_type(card_type=card_type, field_name=k, field_type=v.get("type"), field_value=new_fields[k], project_id=project_id, insert=True)
     return
 
 @with_connection
@@ -388,6 +423,15 @@ def _insert_or_update_card_field(card_id, field_id, current_value):
     DO UPDATE SET current_value = EXCLUDED.current_value;
     """)
     params = (card_id, field_id, current_value)
+    return {'sql': query, 'params': params, 'fetchall': True}
+
+@with_connection
+def _insert_or_update_card_type_field(card_id, field_id, current_value):
+    query = sql.SQL("""
+    INSERT INTO card_type_fields (card_type_id, field_id)
+    VALUES (%s, %s)    
+    """)
+    params = (card_id, field_id)
     return {'sql': query, 'params': params, 'fetchall': True}
 
 @format_project_card_types()
@@ -403,7 +447,7 @@ def _get_project_card_types(project_id: int):
     params = (project_id,)
     return {'sql': query, 'params': params, 'fetchall': True}
 
-@format_project_card_types()
+@format_project_card_types(fetchone=True)
 @with_connection
 def _get_card_type_by_id(card_type_id: int):
     query = sql.SQL("""

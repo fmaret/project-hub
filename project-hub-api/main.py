@@ -14,10 +14,11 @@ from database_connection import (
     _create_field,
     _get_project_cards,
     _get_card_by_id,
-    validate_change_fields,
+    validate_change_card_fields,
     _get_project_card_types,
     _create_card,
     _get_card_type_by_id,
+    validate_change_card_type_fields
 )
 
 app = FastAPI()
@@ -73,8 +74,14 @@ def get_project_cards(project_id: int):
 @app.post("/cards/{card_id}/edit")
 def edit_card(card_id: int, fields: dict):
     card = _get_card_by_id(card_id=card_id)
-    validate_change_fields(card=card, new_fields=fields, project_id=card.get("projectId"))
+    validate_change_card_fields(card=card, new_fields=fields, project_id=card.get("projectId"))
     return _get_card_by_id(card_id=card_id)
+
+@app.post("/card-types/{card_type_id}/edit")
+def edit_card(card_type_id: int, fields: dict):
+    card_type = _get_card_type_by_id(card_type_id=card_type_id)
+    validate_change_card_type_fields(card_type=card_type, new_fields=fields, project_id=card_type.get("projectId"))
+    return _get_card_type_by_id(card_type_id=card_type_id)
 
 @app.get("/cards/{card_id}")
 def get_card_by_id(card_id: int):
@@ -82,7 +89,7 @@ def get_card_by_id(card_id: int):
 
 @app.get("/card-type/{card_type_id}")
 def get_card_type_by_id(card_type_id: int):
-    return _get_card_type_by_id(card_type_id=card_type_id).get("cardTypes")[0]
+    return _get_card_type_by_id(card_type_id=card_type_id)
 
 @app.get("/projects/{project_id}/card-types")
 def get_project_card_types(project_id: int):
@@ -92,7 +99,7 @@ def get_project_card_types(project_id: int):
 def create_card(project_id: int, card_type_id: int, fields: dict):
     card_id = _create_card(project_id=project_id, card_type_id=card_type_id)
     card = _get_card_by_id(card_id=card_id)
-    validate_change_fields(card=card, new_fields=fields, project_id=project_id)
+    validate_change_card_fields(card=card, new_fields=fields, project_id=project_id)
     return _get_card_by_id(card_id=card_id)
 
 app.add_middleware(

@@ -17,7 +17,7 @@ export default {
   name: 'NavBar',
   data: () => ({
     user: [],
-    pages: ["Dashboard", "Roadmap"]
+    pages: ["Dashboard", "Roadmap", "Edition"]
   }),
   props: {
   },
