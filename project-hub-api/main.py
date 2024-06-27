@@ -35,7 +35,8 @@ def create_project(name: str, description: str = None):
 
 @app.post("/users/create")
 def create_user(name: str, email: str, password: str):
-    return _create_user(name, email, password)
+    user_id = _create_user(name, email, password).get('result')
+    return _get_user_by_id(user_id)
 
 @app.post("/roles/create")
 def create_role(name: str):
@@ -68,8 +69,8 @@ def create_field(name: str, typeId: int, projectId: int):
     return _create_field(name, typeId, projectId)
 
 @app.get("/projects/{project_id}/cards")
-def get_project_cards(project_id: int):
-    return _get_project_cards(project_id=project_id)
+def get_project_cards(project_id: int, itemsPerPage: int = 10, page: int = 1):
+    return _get_project_cards(project_id=project_id, items_per_page=itemsPerPage, page=page)
 
 @app.post("/cards/{card_id}/edit")
 def edit_card(card_id: int, fields: dict):

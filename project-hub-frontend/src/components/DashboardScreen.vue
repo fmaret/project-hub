@@ -1,7 +1,6 @@
 <template>
   <div class="dashboard">
     <div class="button" @click="showTicketModal = true; createTicket = true;">Créer ticket</div>
-    selectedcard{{ selectedCard }}
     <CardModal
     :isVisible="showTicketModal"
     :card="this.selectedCard"
@@ -27,6 +26,14 @@
         </tr>
       </tbody>
     </table>
+    <div>
+      <div @click="if (currentCardPage > 1) currentCardPage--;getCards()">
+        précédent
+      </div>
+      <div @click="if (currentCardPage < cards.pages) currentCardPage++;getCards()">
+        suivant
+      </div>
+    </div>
   </div>
 </template>
 
@@ -42,7 +49,7 @@ export default {
   },
   methods: {
     async getCards() {
-      this.cards = await getCards(this.projectId);
+      this.cards = await getCards(this.projectId, this.currentCardPage, 10);
     },
     getCardsColumnsNames(cards) {
       return ["Projet", "Id de la carte", "Type de la carte", ...Object.keys(cards.cards[0].fields), "Action"];
@@ -66,6 +73,7 @@ export default {
     projectId: 1,
     project: null,
     selectedCardIndex: null,
+    currentCardPage: 1,
   }),
   computed: {
     selectedCard() {

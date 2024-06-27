@@ -8,8 +8,8 @@ export async function getUser(userId) {
     return user;
 }
 
-export async function getCards(projectId) {
-    const response = await fetch(`${url}/projects/${projectId}/cards`, {
+export async function getCards(projectId, page = 1, itemsPerPage = 10) {
+    const response = await fetch(`${url}/projects/${projectId}/cards?page=${page}&itemsPerPage=${itemsPerPage}`, {
         method: "GET",
     });
     const cards = await response.json();

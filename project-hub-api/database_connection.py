@@ -16,7 +16,7 @@ def to_json(keys):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            result = func(*args, **kwargs)
+            result = func(*args, **kwargs).get('result')
             if len(result) != len(keys):
                 raise ValueError("The length of the result list and the keys list must be the same")
             result_dict = dict(zip(keys, result))
@@ -29,7 +29,7 @@ def to_json_get_user_by_id():
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            result = func(*args, **kwargs)
+            result = func(*args, **kwargs).get('result')
             result_dict = {
                 "username": result[0][0],
                 "projects": []
@@ -77,7 +77,7 @@ def format_output_type_get_type_by_id():
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            result = func(*args, **kwargs)
+            result = func(*args, **kwargs).get('result')
             res = recurse_format_type(result, result[0][0], values = {})
             return {
                 "id": result[0][0],
@@ -91,20 +91,25 @@ def format_project_cards():
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            items_per_page = kwargs.get("items_per_page", 10)
+            page = kwargs.get("page", 1)
             t = time.time()
             result = func(*args, **kwargs)
+            result, total_count = result.get("result"), result.get("total_records")
             cards = []
             types_memory = {}
             for r in result:
                 cards_ids = list(map(lambda x: x.get("cardId"), cards))
                 type_id = r[7]
+                print("ici mon r", r)
                 if type_id in types_memory:
                     type_name = types_memory[type_id].get("type")
                     type_values = copy.deepcopy(types_memory[type_id].get("values"))
                 else:
                     type_obj = _get_type_by_id(type_id)
+                    print("mon type obj", type_obj)
                     type_name = type_obj.get("type")
-                    type_values = type_obj.get("values")
+                    type_values = copy.deepcopy(type_obj.get("values"))
                     types_memory[type_id] = type_obj
                 if r[0] not in cards_ids: 
                     cards.append({
@@ -128,7 +133,10 @@ def format_project_cards():
                         "values": copy.deepcopy(type_values)
                     } 
             return {
-                "cards": cards
+                "cards": cards,
+                "itemsPerPage": items_per_page,
+                "page": page,
+                "pages": total_count//items_per_page + 1
             }
         return wrapper
     return decorator
@@ -137,7 +145,7 @@ def format_project_card_types(fetchone=False):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            result = func(*args, **kwargs)
+            result = func(*args, **kwargs).get('result')
             card_types = []
             for r in result:
                 card_types_ids = list(map(lambda x: x.get("cardTypeId"), card_types))
@@ -172,7 +180,7 @@ def to_json_get_user_account_roles():
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            result = func(*args, **kwargs)
+            result = func(*args, **kwargs).get('result')
             roles = []
             for r in result:
                 roles.append(r[2])
@@ -188,7 +196,7 @@ def to_json_get_project_by_id():
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            result = func(*args, **kwargs)
+            result = func(*args, **kwargs).get('result')
             users = []
             for r in result:
                 usernames_list = list(map(lambda x: x.get("username"), users))
@@ -226,6 +234,10 @@ def with_connection(func):
             )
             query_data = func(*args, **kwargs)
             with conn.cursor() as cur:
+                total_records = None
+                if query_data.get('count_sql'):
+                    cur.execute(query_data['count_sql'], query_data['count_params'])
+                    total_records = cur.fetchone()[0]
                 a = cur.execute(query_data['sql'], query_data['params'])
                 conn.commit()
                 if query_data.get('fetchone'):
@@ -238,7 +250,7 @@ def with_connection(func):
                     result = cur.fetchall()
                 else:
                     conn.commit()
-            return result
+            return {'result': result, 'total_records': total_records}
         except psycopg2.Error as e:
             print(f"Error executing the query: {e}")
             conn.rollback()
@@ -246,12 +258,6 @@ def with_connection(func):
         finally:
             conn.close()
     return wrapper
-
-@with_connection
-def get_user_by_id(id):
-    query = sql.SQL("SELECT * FROM users WHERE id = %s")
-    params = (id,)
-    return {'sql': query, 'params': params, 'fetchone': True}
 
 @with_connection
 def _create_user(name: str, email: str, password: str):
@@ -348,6 +354,7 @@ def _get_role_by_id(id: int):
 @format_output_type_get_type_by_id()
 @with_connection
 def _get_type_by_id(id: int):
+    print("mon type id",)
     query = sql.SQL("""
     WITH RECURSIVE type_hierarchy AS (
         SELECT c.id, c.type, c.is_optional, cte.custom_type_child_id, cte.index, cte.value
@@ -484,32 +491,50 @@ def _create_card(project_id: int, card_type_id: int):
     params = (card_type_id, project_id)
     return {'sql': query, 'params': params, 'fetchone': True}
 
-
 @format_project_cards()
 @with_connection
-def _get_project_cards(project_id: int = None, card_type_id: int = None, card_id: int = None):
-    query = """
-    select c.id as card_id, c.card_type_id as card_type_id, c.project_id, ctf.field_id as field_id, f.name as field_name, default_value, cf.current_value, ct.id as field_id from cards c
-    join card_type_fields ctf on ctf.card_type_id = c.card_type_id
-    join fields f on f.id = ctf.field_id
-    left join card_fields cf on (cf.card_id = c.id and cf.field_id = f.id)
-    join custom_types ct on ct.id = f.custom_type_id
+def _get_project_cards(project_id: int = None, card_type_id: int = None, card_id: int = None, items_per_page: int = 10, page: int = 1, sort: dict = {}, filter: dict = {}):
+    query_left = """
+      select cards.id as card_id, cards.card_type_id as card_type_id, cards.project_id, card_type_fields.field_id as field_id, fields.name as field_name, fields.default_value, card_fields.current_value, custom_types.id as field_id
+  from 
+    (
+    select * from cards
     """
-    wheres = []
-    params = []
+    query_right = """
+    limit %s offset %s
+    ) as cards
+    join card_type_fields on card_type_fields.card_type_id = cards.card_type_id
+    join fields on fields.id = card_type_fields.field_id
+    left join card_fields card_fields on (card_fields.card_id = cards.id and card_fields.field_id = fields.id)
+    join custom_types on custom_types.id = fields.custom_type_id
+    """
+    wheres_left = []
+    wheres_right = []
+    # filter = [{"operation": "EQUALS", "key": "c.id", "value": "2"}]
+    # sort = [{"key": "c.id", "order": "ASC"}]
+    order = " ".join(map(lambda x: x.get("key") + " " + (x.get("order") if x.get("order") in ["ASC", "DESC"] else ""), sort)).strip()
+    if order:
+        order = "order by " + order 
+    params = [items_per_page, (page-1)*items_per_page]
     if project_id:
-        wheres.append("c.project_id = %s")
+        wheres_right.append("cards.project_id = %s")
         params.append(project_id)
     if card_type_id:
-        wheres.append("c.card_type_id = %s")
+        wheres_right.append("cards.card_type_id = %s")
         params.append(card_type_id)
     if card_id:
-        wheres.append("c.id = %s")
-        params.append(card_id)
-    if wheres:
-        query += " where " + " and ".join(wheres) + ";"
-    else:
-        query += ";"
-    query = sql.SQL(query)
+        wheres_left.append("cards.id = %s")
+        params = [card_id] + params
+    for f in filter:
+        operation_factory = {"EQUALS": "="}
+        wheres_right.append(f"{f.get('key')} {operation_factory[f.get('operation')]} {f.get('value')}")
+    if wheres_right:
+        query_right += " where " + " and ".join(wheres_right)
+    if wheres_left:
+        query_left += " where " + " and ".join(wheres_left)
+    query = sql.SQL(query_left+query_right+" "+order+";")
     params = tuple(params)
-    return {'sql': query, 'params': params, 'fetchall': True}
+    count_query = sql.SQL("SELECT COUNT(*) FROM cards " + ("WHERE " + " AND ".join(wheres_right) if wheres_right else "") + ";")
+    count_params = params[:len(wheres_left)] + params[len(wheres_left)+2:]
+    print("coucou params", query_left+query_right+" "+order+";")
+    return {'sql': query, 'params': params, 'fetchall': True, 'count_sql': count_query, 'count_params': count_params}
