@@ -248,3 +248,19 @@ INSERT INTO custom_types_elements (custom_type_parent_id, custom_type_child_id) 
 
 INSERT INTO fields (name, custom_type_id) VALUES ('sprint', 9);
 INSERT INTO card_type_fields (card_type_id, field_id) VALUES (1, 4);
+
+
+
+
+drop view if exists detailed_cards;
+
+CREATE VIEW detailed_cards AS
+select cards.id as card_id, cards.card_type_id as card_type_id, cards.project_id, card_type_fields.field_id as field_id, fields.name as field_name, fields.default_value, card_fields.current_value, custom_types.id	  	from 
+	    (
+	    select * from cards
+	    ) as cards
+	    join card_type_fields on card_type_fields.card_type_id = cards.card_type_id
+	    join fields on fields.id = card_type_fields.field_id
+	    left join card_fields card_fields on (card_fields.card_id = cards.id and card_fields.field_id = fields.id)
+	    join custom_types on custom_types.id = fields.custom_type_id	    
+;

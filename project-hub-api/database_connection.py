@@ -101,13 +101,11 @@ def format_project_cards():
             for r in result:
                 cards_ids = list(map(lambda x: x.get("cardId"), cards))
                 type_id = r[7]
-                print("ici mon r", r)
                 if type_id in types_memory:
                     type_name = types_memory[type_id].get("type")
                     type_values = copy.deepcopy(types_memory[type_id].get("values"))
                 else:
                     type_obj = _get_type_by_id(type_id)
-                    print("mon type obj", type_obj)
                     type_name = type_obj.get("type")
                     type_values = copy.deepcopy(type_obj.get("values"))
                     types_memory[type_id] = type_obj
@@ -236,9 +234,16 @@ def with_connection(func):
             with conn.cursor() as cur:
                 total_records = None
                 if query_data.get('count_sql'):
+                    print(1)
+                    q=query_data["sql"].as_string(conn)
+                    for p in query_data["params"]:
+                        q=q.replace("%s", str(p))+ " "
+                    print("coucou", q)
                     cur.execute(query_data['count_sql'], query_data['count_params'])
                     total_records = cur.fetchone()[0]
+                    print(2)
                 a = cur.execute(query_data['sql'], query_data['params'])
+                print(3)
                 conn.commit()
                 if query_data.get('fetchone'):
                     r = cur.fetchone()
@@ -354,7 +359,6 @@ def _get_role_by_id(id: int):
 @format_output_type_get_type_by_id()
 @with_connection
 def _get_type_by_id(id: int):
-    print("mon type id",)
     query = sql.SQL("""
     WITH RECURSIVE type_hierarchy AS (
         SELECT c.id, c.type, c.is_optional, cte.custom_type_child_id, cte.index, cte.value
@@ -491,50 +495,59 @@ def _create_card(project_id: int, card_type_id: int):
     params = (card_type_id, project_id)
     return {'sql': query, 'params': params, 'fetchone': True}
 
+
+def convert_to_jsonb(value):
+    if type(value) == str:
+        return f"\"{value}\""
+    return value
+
 @format_project_cards()
 @with_connection
-def _get_project_cards(project_id: int = None, card_type_id: int = None, card_id: int = None, items_per_page: int = 10, page: int = 1, sort: dict = {}, filter: dict = {}):
+def _get_project_cards(project_id: int = None, card_type_id: int = None, card_id: int = None, items_per_page: int = 10, page: int = 1, sort: dict = {}, filters: list = []):
     query_left = """
-      select cards.id as card_id, cards.card_type_id as card_type_id, cards.project_id, card_type_fields.field_id as field_id, fields.name as field_name, fields.default_value, card_fields.current_value, custom_types.id as field_id
-  from 
-    (
-    select * from cards
+      select * from detailed_cards
+        where card_id in (
+        select card_id from detailed_cards
     """
-    query_right = """
-    limit %s offset %s
-    ) as cards
-    join card_type_fields on card_type_fields.card_type_id = cards.card_type_id
-    join fields on fields.id = card_type_fields.field_id
-    left join card_fields card_fields on (card_fields.card_id = cards.id and card_fields.field_id = fields.id)
-    join custom_types on custom_types.id = fields.custom_type_id
-    """
+    query_right = f"group by card_id limit {items_per_page} offset {(page-1)*items_per_page})"
     wheres_left = []
     wheres_right = []
-    # filter = [{"operation": "EQUALS", "key": "c.id", "value": "2"}]
+    wheres_count = []
+    for f in filters:
+        f["value"] = convert_to_jsonb(f["value"])
+    # filters = [{"operation": "EQUALS", "key": "cards.id", "value": "2"}]
     # sort = [{"key": "c.id", "order": "ASC"}]
     order = " ".join(map(lambda x: x.get("key") + " " + (x.get("order") if x.get("order") in ["ASC", "DESC"] else ""), sort)).strip()
     if order:
         order = "order by " + order 
-    params = [items_per_page, (page-1)*items_per_page]
+    # params = [items_per_page, (page-1)*items_per_page]
+    params=[]
     if project_id:
-        wheres_right.append("cards.project_id = %s")
+        wheres_left.append("detailed_cards.project_id = %s")
         params.append(project_id)
     if card_type_id:
-        wheres_right.append("cards.card_type_id = %s")
+        wheres_left.append("detailed_cards.card_type_id = %s")
         params.append(card_type_id)
     if card_id:
-        wheres_left.append("cards.id = %s")
+        wheres_left.append("detailed_cards.card_id = %s")
         params = [card_id] + params
-    for f in filter:
+    for f in filters:
         operation_factory = {"EQUALS": "="}
-        wheres_right.append(f"{f.get('key')} {operation_factory[f.get('operation')]} {f.get('value')}")
+        wheres_left.append(f"detailed_cards.field_name='{f.get('key')}'")
+        wheres_left.append(f"(detailed_cards.current_value{operation_factory[f.get('operation')]}'{f.get('value')}' or detailed_cards.default_value{operation_factory[f.get('operation')]}'{f.get('value')}')")
+        wheres_count.append(f"(detailed_cards.field_name='{f.get('key')}' and (coalesce(detailed_cards.current_value, detailed_cards.default_value) {operation_factory[f.get('operation')]} '{f.get('value')}'))")
     if wheres_right:
-        query_right += " where " + " and ".join(wheres_right)
+        query_right += " and " + " and ".join(wheres_right)
     if wheres_left:
         query_left += " where " + " and ".join(wheres_left)
-    query = sql.SQL(query_left+query_right+" "+order+";")
+    query = sql.SQL(query_left+query_right+" "+order)
     params = tuple(params)
-    count_query = sql.SQL("SELECT COUNT(*) FROM cards " + ("WHERE " + " AND ".join(wheres_right) if wheres_right else "") + ";")
-    count_params = params[:len(wheres_left)] + params[len(wheres_left)+2:]
-    print("coucou params", query_left+query_right+" "+order+";")
+    count_query = sql.SQL("""
+    select count(*) from(
+    select card_id from detailed_cards
+    %s 
+    group by card_id
+    ) as cards;
+    """.replace("%s", (" where " + "and ".join(wheres_count) + "\n") if wheres_count else ""))
+    count_params = ()
     return {'sql': query, 'params': params, 'fetchall': True, 'count_sql': count_query, 'count_params': count_params}

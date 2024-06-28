@@ -8,9 +8,13 @@ export async function getUser(userId) {
     return user;
 }
 
-export async function getCards(projectId, page = 1, itemsPerPage = 10) {
+export async function getCards(projectId, page = 1, itemsPerPage = 10, filters = {}) {
     const response = await fetch(`${url}/projects/${projectId}/cards?page=${page}&itemsPerPage=${itemsPerPage}`, {
-        method: "GET",
+        method: "POST",
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({filters: filters})
     });
     const cards = await response.json();
     return cards;

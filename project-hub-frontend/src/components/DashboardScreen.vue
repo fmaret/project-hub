@@ -1,6 +1,7 @@
 <template>
   <div class="dashboard">
     <div class="button" @click="showTicketModal = true; createTicket = true;">Créer ticket</div>
+    <input type="text" v-model="filtersJson" @input="updateFiltersFromJson"/>
     <CardModal
     :isVisible="showTicketModal"
     :card="this.selectedCard"
@@ -26,12 +27,16 @@
         </tr>
       </tbody>
     </table>
-    <div>
+    <div class="page-selector">
       <div @click="if (currentCardPage > 1) currentCardPage--;getCards()">
-        précédent
+        {{`<`}}
+      </div>
+      <div v-for="i in cards.pages" :key="i" :class="{'page-selected': i == currentCardPage}"
+      @click="currentCardPage = i; getCards()">
+        {{ i }}
       </div>
       <div @click="if (currentCardPage < cards.pages) currentCardPage++;getCards()">
-        suivant
+        {{`>`}}
       </div>
     </div>
   </div>
@@ -48,8 +53,12 @@ export default {
     CardModal
   },
   methods: {
+    updateFiltersFromJson(event) {
+        this.filtersJson = event.target.value;
+        this.getCards();
+    },
     async getCards() {
-      this.cards = await getCards(this.projectId, this.currentCardPage, 10);
+      this.cards = await getCards(this.projectId, this.currentCardPage, 10, this.filters);
     },
     getCardsColumnsNames(cards) {
       return ["Projet", "Id de la carte", "Type de la carte", ...Object.keys(cards.cards[0].fields), "Action"];
@@ -74,11 +83,26 @@ export default {
     project: null,
     selectedCardIndex: null,
     currentCardPage: 1,
+    filters: []
   }),
   computed: {
     selectedCard() {
       return this.selectedCardIndex != null ? this.cards.cards[this.selectedCardIndex] : null;
-    }
+    },
+    filtersJson: {
+            get() {
+              return JSON.stringify(this.filters, null, 2);  // Format JSON with indentation for readability
+              
+            },
+            set(json) {
+                try {
+                    this.filters = JSON.parse(json);
+                } catch (e) {
+                  console.log("e", e);
+                }
+            }
+        }
+
   }
 }
 </script>
@@ -108,5 +132,29 @@ export default {
 
 .input-with-label > * {
   margin: 0.2rem;
+}
+
+.page-selector {
+  display: flex;
+}
+
+.page-selector > * {
+  padding:0.5rem;
+}
+
+.page-selector > *:hover {
+  cursor: pointer;
+}
+
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-selected {
+  text-decoration: underline;
+  font-weight: bold;
 }
 </style>

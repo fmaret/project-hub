@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -68,9 +69,9 @@ def get_type_by_id(type_id: int):
 def create_field(name: str, typeId: int, projectId: int):
     return _create_field(name, typeId, projectId)
 
-@app.get("/projects/{project_id}/cards")
-def get_project_cards(project_id: int, itemsPerPage: int = 10, page: int = 1):
-    return _get_project_cards(project_id=project_id, items_per_page=itemsPerPage, page=page)
+@app.post("/projects/{project_id}/cards")
+def search_project_cards(project_id: int, itemsPerPage: int = 10, page: int = 1, payload: dict = {}):
+    return _get_project_cards(project_id=project_id, items_per_page=itemsPerPage, page=page, filters=payload.get("filters", []))
 
 @app.post("/cards/{card_id}/edit")
 def edit_card(card_id: int, fields: dict):
