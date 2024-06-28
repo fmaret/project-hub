@@ -16,7 +16,7 @@
           :options="getCardEnumOptions(card, field)"
           :returnedValues="card.fields[field].values"
           class="select"
-          @input="e => e"
+          @input="e => newFields[field] = e"
           />
           <input type="text" v-model="newFields[field]" v-else>
         </div>
