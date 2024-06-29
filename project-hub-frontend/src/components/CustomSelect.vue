@@ -49,11 +49,13 @@
       selectOption(option, i) {
         if (!this.multiSelect) {
           this.selected = option;
-          this.selectedReturnedValues = this.returnedValues[i];
+          if (this.returnedValues) this.selectedReturnedValues = this.returnedValues[i];
         } else {
           this.selected.includes(option) ? this.selected.pop(option) : this.selected.push(option);
-          if (this.selectedReturnedValues?.length > 0) this.selectedReturnedValues.includes(this.returnedValues[i]) ? this.selectedReturnedValues.pop(this.returnedValues[i]) : this.selectedReturnedValues.push(this.returnedValues[i]);
-          else this.selectedReturnedValues?.push(this.returnedValues[i]);
+          if (this.returnedValues) {
+            if (this.selectedReturnedValues?.length > 0) this.selectedReturnedValues.includes(this.returnedValues[i]) ? this.selectedReturnedValues.pop(this.returnedValues[i]) : this.selectedReturnedValues.push(this.returnedValues[i]);
+            else this.selectedReturnedValues?.push(this.returnedValues[i]);
+          }
         }
         this.open = false;
         this.$emit('input', this.returnedValues?.length > 0 ? this.selectedReturnedValues : this.selected);
@@ -66,12 +68,13 @@
     }),
     mounted() {
         this.selected = this.default ? this.default : this.options.length > 0 && !this.multiSelect ? this.options[0] : this.multiSelect ? [] : null;
+        if (this.returnedValues) this.selectedReturnedValues = this.multiSelect ? (this.default ? this.default.map(f=>this.options.indexOf(f)).map(index=>this.returnedValues[index]) : []) : this.returnedValues;
         this.$emit("input", this.selected);
     },  
     watch: {
       options() {
-        this.selected = this.default ? this.default : this.options.length > 0 && !this.multiSelect ? this.options[0] : this.multiSelect ? [] : null;
-        if (this.returnedValues?.length > 0) this.selectedReturnedValues = this.returnedValues[0];
+        // this.selected = this.default ? this.default : this.options.length > 0 && !this.multiSelect ? this.options[0] : this.multiSelect ? [] : null;
+        // if (this.returnedValues?.length > 0) this.selectedReturnedValues = this.selectedReturnedValues[0];
         this.$emit("input", this.returnedValues ? this.selectedReturnedValues : this.selected);
       }
     },

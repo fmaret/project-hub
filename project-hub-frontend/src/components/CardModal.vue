@@ -1,6 +1,7 @@
 <template>
     <CustomModal :isVisible="isVisible" @close="this.$emit('close')">
       <h2 v-if="createTicket">Créer un ticket</h2>
+      {{ newFields }}
       <h2 v-else>Edition du ticket</h2>
       <div class="grid" v-if="!createTicket">
         <div class="input-with-label" v-for="field, index in Object.keys(card.fields)" :key="index">
@@ -9,12 +10,13 @@
           <CustomSelect :multiSelect="card.fields[field].type.startsWith('LIST')" v-if="/MEMBER/.test(card.fields[field].type)"
           :options="project.users?.map(e=>e.username)"
           :returnedValues="project.users?.map(e=>e.id)"
+          :default="project.users?.filter(e=>card.fields[field].value ? card.fields[field].value.includes(e.id) : false).map(e=>e.username)"
           class="select"
           @input="e => getMembersSelected(field, e)"
           />
           <CustomSelect :multiSelect="card.fields[field].type.startsWith('LIST')" v-else-if="/ENUM/.test(card.fields[field].type)"
           :options="getCardEnumOptions(card, field)"
-          :returnedValues="card.fields[field].values"
+          :default="card.fields[field].value"
           class="select"
           @input="e => newFields[field] = e"
           />
@@ -119,7 +121,7 @@
         if (v && this.createTicket) this.cardTypes = (await getCardTypes(this.projectId)).cardTypes;
         if (v && !this.createTicket) {
           Object.keys(this.card.fields).map(key=> {
-            this.newFields[key] = this.card.fields[key].value
+            this.newFields[key] = this.card.fields[key].value;
           })
           return
         }

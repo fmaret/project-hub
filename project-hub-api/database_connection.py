@@ -391,16 +391,16 @@ def validate_card_field_type(card, field_name, field_type, field_value, project_
     if field_type == "STRING":
         if type(field_value) == str:
             if insert:
-                _insert_or_update_card_field(card.get("cardId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=f"\"{field_value}\"")
+                _insert_or_update_card_field(card.get("cardId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=convert_to_jsonb(field_value))
     elif field_type == "INTEGER":
         if type(field_value) == int:
             if insert:
-                _insert_or_update_card_field(card.get("cardId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=field_value)
+                _insert_or_update_card_field(card.get("cardId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=convert_to_jsonb(field_value))
     elif field_type.startswith("LIST"):
         list_type = field_type[5:-1]
         if type(field_value) == list and all([validate_card_field_type(card=card, field_name=field_name, field_type=list_type, field_value=v, project_id=project_id) for v in field_value]):
             if insert:
-                _insert_or_update_card_field(card.get("cardId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=f"\"{field_value}\"")
+                _insert_or_update_card_field(card.get("cardId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=convert_to_jsonb(field_value))
     elif field_type == "MEMBER":
         user = _get_user_by_id(field_value)
         project = _get_project_by_id(project_id)
@@ -443,13 +443,14 @@ def validate_change_card_type_fields(card_type, new_fields, project_id):
 
 @with_connection
 def _insert_or_update_card_field(card_id, field_id, current_value):
-    query = sql.SQL("""
+    print("coucou", current_value)
+    query = sql.SQL(f"""
     INSERT INTO card_fields (card_id, field_id, current_value)
-    SELECT %s, %s, %s
+    SELECT {card_id}, {field_id}, '{current_value}'
     ON CONFLICT (card_id, field_id)
     DO UPDATE SET current_value = EXCLUDED.current_value;
     """)
-    params = (card_id, field_id, current_value)
+    params = ()
     return {'sql': query, 'params': params, 'fetchall': True}
 
 @with_connection
@@ -497,8 +498,12 @@ def _create_card(project_id: int, card_type_id: int):
 
 
 def convert_to_jsonb(value):
+    print("value", value, type(value))
     if type(value) == str:
         return f"\"{value}\""
+    if type(value) == list:
+        print("myval", str(value))
+        return str(value).replace("'", '"')
     return value
 
 @format_project_cards()
