@@ -264,3 +264,12 @@ select cards.id as card_id, cards.card_type_id as card_type_id, cards.project_id
 	    left join card_fields card_fields on (card_fields.card_id = cards.id and card_fields.field_id = fields.id)
 	    join custom_types on custom_types.id = fields.custom_type_id	    
 ;
+
+
+INSERT INTO custom_types (type, is_optional) VALUES ('ENUM', false);
+INSERT INTO custom_types_elements (custom_type_parent_id, value) VALUES (10, 'BACKLOG');
+INSERT INTO custom_types_elements (custom_type_parent_id, value) VALUES (10, 'TODO');
+INSERT INTO custom_types_elements (custom_type_parent_id, value) VALUES (10, 'IN PROGRESS');
+INSERT INTO custom_types_elements (custom_type_parent_id, value) VALUES (10, 'DONE');
+INSERT INTO fields (name, custom_type_id) VALUES ('status', 10);
+INSERT INTO card_type_fields (card_type_id, field_id) VALUES (1, 5);

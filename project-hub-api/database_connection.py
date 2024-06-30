@@ -388,6 +388,10 @@ def _get_card_by_id(card_id: int):
 
 def validate_card_field_type(card, field_name, field_type, field_value, project_id, insert=False):
     print("coucoudebut", field_type, field_value, card)
+    if field_type.startswith("ENUM"):
+        #TODO : VERIFIER QUE L'ENUM EXISTE BIEN SINON ERREUR D'UPDATE
+        if insert:
+            _insert_or_update_card_field(card.get("cardId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=convert_to_jsonb(field_value))
     if field_type == "STRING":
         if type(field_value) == str:
             if insert:
@@ -398,6 +402,7 @@ def validate_card_field_type(card, field_name, field_type, field_value, project_
                 _insert_or_update_card_field(card.get("cardId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=convert_to_jsonb(field_value))
     elif field_type.startswith("LIST"):
         list_type = field_type[5:-1]
+        print("coucou", field_value, field_type)
         if type(field_value) == list and all([validate_card_field_type(card=card, field_name=field_name, field_type=list_type, field_value=v, project_id=project_id) for v in field_value]):
             if insert:
                 _insert_or_update_card_field(card.get("cardId"), _get_field_by_name(name=field_name, project_id=project_id).get("fieldId"), current_value=convert_to_jsonb(field_value))

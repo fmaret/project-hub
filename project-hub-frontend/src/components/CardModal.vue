@@ -80,7 +80,7 @@
     },
     methods: {
       getCardEnumOptions(card, field) {
-        return card.fields[field].values[card.fields[field].type.substring(card.fields[field].type.indexOf('ENUM_')+'ENUM_'.length, card.fields[field].type.indexOf('ENUM_')+'ENUM_'.length+1)];
+        return card.fields[field].values[card.fields[field].type.split("_")[1].split("]")[0]];
       },
       changeSelectedCardType(e) {
         this.selectedCardTypeId = e; 

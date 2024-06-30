@@ -8,7 +8,7 @@
     </div>
     <div class="body-container" v-if="cards.cards">
       <div class="card-line" v-for="card in displayedCards" :key="card.cardId">
-        <div v-for="cardPart in orderedCards" :key="cardPart" class="card" :style="{'left': `${150*cardPart.column}px`, 'top': `${25*cardPart.line}px`, 'width': `${150*cardPart.width}px`, 'background-color': this.colors[cardPart.colorId % this.colors.length]}">
+        <div v-for="cardPart in orderedCards" :key="cardPart" class="card" :style="{'left': `${150*cardPart.column}px`, 'top': `${25*cardPart.line}px`, 'width': `${150*cardPart.width}px`, 'height': '20px', 'background-color': this.colors[cardPart.colorId % this.colors.length]}">
           {{ cardPart.title }}
         </div>
       </div>
@@ -23,7 +23,7 @@ export default {
   data() {
     return {
       colors : ["darkgreen", "darkorange", "darkyellow", "darkblue", "darkred"],
-      columns: ["2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12"],
+      columnField: "sprint",
       cards: {},
       projectId: 1
     };
@@ -86,14 +86,19 @@ export default {
     await this.getCards(this.projectId);
   },
   computed: {
+    columns() {
+      return this.cards?.cards ? this.cards.cards[0].fields[this.columnField].values[this.cards.cards[0].fields[this.columnField].type.split("_")[1].split("]")[0]] : [];
+    },
     displayedCards() {
-      return this.cards?.cards ? this.cards?.cards.filter(card => card.fields.sprint.value) : [];
+      return this.cards?.cards ? this.cards?.cards.filter(card => card.fields[this.columnField].value) : [];
     },
     orderedCards() {
       let obj = [];
       let columnsLines = new Array(this.columns.length).fill(0);
       this.displayedCards.map(card => {
-        let columnsIds = card.fields.sprint.value.map(sprint => (this.columns.indexOf(sprint)));
+        let val = card.fields[this.columnField].value;
+        val = Array.isArray(val) ? val : [val];
+        let columnsIds = val.map(e => (this.columns.indexOf(e)));
         columnsIds.map(columnId => {
           let line = columnsLines[columnId]++;
           let column = columnId;

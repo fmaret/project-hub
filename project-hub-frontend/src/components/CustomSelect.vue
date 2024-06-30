@@ -2,7 +2,7 @@
 <template>
     <div class="custom-select" :tabindex="tabindex" @blur="open = false">
         <div class="selected" :class="{ open: open }" @click="open = !open">
-        {{ selected }}
+        {{ selected }} {{ selectedReturnedValues }}
         </div>
         <div class="items" :class="{ selectHide: !open }">
         <div
@@ -69,7 +69,7 @@
     mounted() {
         this.selected = this.default ? this.default : this.options.length > 0 && !this.multiSelect ? this.options[0] : this.multiSelect ? [] : null;
         if (this.returnedValues) this.selectedReturnedValues = this.multiSelect ? (this.default ? this.default.map(f=>this.options.indexOf(f)).map(index=>this.returnedValues[index]) : []) : this.returnedValues;
-        this.$emit("input", this.selected);
+        this.$emit("input", this.returnedValues ? this.selectedReturnedValues : this.selected);
     },  
     watch: {
       options() {
