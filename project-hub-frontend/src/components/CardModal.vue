@@ -1,7 +1,6 @@
 <template>
     <CustomModal :isVisible="isVisible" @close="this.$emit('close')">
       <h2 v-if="createTicket">Créer un ticket</h2>
-      {{ newFields }}
       <h2 v-else>Edition du ticket</h2>
       <div class="grid" v-if="!createTicket">
         <div class="input-with-label" v-for="field, index in Object.keys(card.fields)" :key="index">
