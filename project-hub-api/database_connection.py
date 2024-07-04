@@ -148,6 +148,7 @@ def format_project_card_types(fetchone=False):
             for r in result:
                 card_types_ids = list(map(lambda x: x.get("cardTypeId"), card_types))
                 type_id = r[5]
+                type_obj = _get_type_by_id(type_id)
                 if r[0] not in card_types_ids: 
                     card_types.append({
                         "projectName": r[1],
@@ -157,7 +158,8 @@ def format_project_card_types(fetchone=False):
                         "fields": {
                             r[3]: {
                                 "value": r[4],
-                                "type": _get_type_by_id(type_id).get("type")
+                                "type": type_obj.get("type"),
+                                "values": type_obj.get("values")
                             }
                         } 
                     })
@@ -165,7 +167,8 @@ def format_project_card_types(fetchone=False):
                     card_type_index = card_types_ids.index(r[0])
                     card_types[card_type_index]["fields"][r[3]] = {
                         "value": r[4],
-                        "type": _get_type_by_id(type_id).get("type")
+                        "type": type_obj.get("type"),
+                        "values": type_obj.get("values")
                     } 
             return {
                 "cardTypes": card_types

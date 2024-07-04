@@ -4,6 +4,12 @@ version = "0.1.0"
 description = ""
 authors = ["fmaret <maret.florent59@gmail.com>"]
 readme = "README.md"
+packages = [
+  { include = "scripts"}
+]
+
+[tool.poetry.scripts]
+local = 'scripts:local'
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -15,3 +21,4 @@ psycopg2-binary = "^2.9.9"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+

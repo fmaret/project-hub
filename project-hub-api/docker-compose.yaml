@@ -1,7 +1,7 @@
 version: "3"
 
 services:
-  db:
+  project-hub-db:
     image: postgres:12.10
     ports:
       - "8015:5432"

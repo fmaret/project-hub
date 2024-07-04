@@ -22,7 +22,7 @@
           <input type="text" v-model="newFields[field]" v-else>
         </div>
       </div>
-      <div v-else>
+      <div v-else-if="Object.keys(cardTypes).length > 0">
         <div class="input-with-label">
           <span class="field-name">Type de carte</span>
           <CustomSelect
@@ -32,15 +32,22 @@
           @input="changeSelectedCardType"
           />
         </div>
-        <div class="grid" v-if="createTicket">
+        <div class="grid">
           <div class="input-with-label" v-for="field, index in Object.keys(this.cardTypeFields)" :key="index">
             <span class="field-name">{{ field }}</span>
             <span class="field-type">{{ this.cardTypeFields[field].type }}</span>
-            <CustomSelect multiSelect=true v-if="this.cardTypeFields[field].type.startsWith('LIST')"
+            <CustomSelect :multiSelect="cardTypeFields[field].type.startsWith('LIST')" v-if="/MEMBER/.test(cardTypeFields[field].type)"
             :options="project.users?.map(e=>e.username)"
             :returnedValues="project.users?.map(e=>e.id)"
+            :default="project.users?.filter(e=>cardTypeFields[field].value ? cardTypeFields[field].value.includes(e.id) : false).map(e=>e.username)"
             class="select"
             @input="e => getMembersSelected(field, e)"
+            />
+            <CustomSelect :multiSelect="cardTypeFields[field].type.startsWith('LIST')" v-else-if="/ENUM/.test(cardType.fields[field].type)"
+            :options="getCardEnumOptions(cardType, field)"
+            :default="cardTypeFields[field].value"
+            class="select"
+            @input="e => newFields[field] = e"
             />
             <input type="text" v-model="newFields[field]" v-else>
           </div>
@@ -127,8 +134,13 @@
       }
     },
     computed: {
+      cardType() {
+        if (Object.keys(this.cardTypes).length > 0 && this.selectedCardTypeId) console.log("aze", this.cardTypes, this.selectedCardTypeId);
+        return Object.keys(this.cardTypes).length > 0 && this.selectedCardTypeId ? this.cardTypes.filter(e=>e.cardTypeId == this.selectedCardTypeId)[0] : {};
+      },
       cardTypeFields() {
-        return this.cardTypes && this.selectedCardTypeId ? this.cardTypes.filter(e=>e.cardTypeId == this.selectedCardTypeId)[0].fields : {};
+        console.log("coucou", this.cardType, this.cardType.fields);
+        return this.cardType.fields ? this.cardType.fields : {};
       }
     }
   }
