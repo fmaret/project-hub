@@ -1,6 +1,7 @@
 <template>
     <div v-if="isVisible" class="modal-overlay" @click="closeModal">
       <div class="modal-content" @click.stop>
+        <h2 class="modal-title">{{title}}</h2>
         <button class="close-button" @click="closeModal">X</button>
         <slot></slot>
       </div>
@@ -14,6 +15,11 @@
       isVisible: {
         type: Boolean,
         required: true
+      },
+      title: {
+        type: String,
+        required: false,
+        default: ""
       }
     },
     methods: {
@@ -53,6 +59,14 @@
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
+  }
+
+  .modal-title {
+    position: absolute;
+    top: 0;
+    left: 0; 
+    right: 0; 
+
   }
   </style>
   

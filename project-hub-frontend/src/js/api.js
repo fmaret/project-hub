@@ -1,4 +1,4 @@
-const url = "http://localhost:8014"
+const url = "http://localhost:8014";
 
 export async function getUser(userId) {
     const response = await fetch(`${url}/users/${userId}`, {
@@ -31,6 +31,19 @@ export async function getProject(projectId) {
 export async function editCard(cardId, fields) {
     fields;
     const response = await fetch(`${url}/cards/${cardId}/edit`, {
+        method: "POST",
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(fields)
+    });
+    const project = await response.json();
+    return project;
+}
+
+export async function createCard(projectId, cardTypeId, fields) {
+    fields;
+    const response = await fetch(`${url}/cards/create?project_id=${projectId}&card_type_id=${cardTypeId}`, {
         method: "POST",
         headers: {
             'Content-Type': 'application/json'

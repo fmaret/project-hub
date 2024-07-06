@@ -1,8 +1,32 @@
 <template>
-    <CustomModal :isVisible="isVisible" @close="this.$emit('close')">
-      <h2 v-if="createTicket">Créer un ticket</h2>
-      <h2 v-else>Edition du ticket</h2>
-      <div class="grid" v-if="!createTicket">
+    <CustomModal :isVisible="isVisible" :title="createTicket ? 'Créer un ticket' : 'Editer un ticket'" @close="this.$emit('close')">
+      <div class="card-modal-content">
+        <div class="card-modal-content-top">aze</div>
+        <EditableText :text="card.fields['title'].value" class="title"/>
+        <div class="card-modal-content-body">
+          <div class="card-modal-content-left">
+            <template v-for="field, index in ['assignees']" :key="index">
+              <CustomSelect :multiSelect="card.fields[field].type.startsWith('LIST')" v-if="/MEMBER/.test(card.fields[field].type)"
+              :options="project.users?.map(e=>e.username)"
+              :returnedValues="project.users?.map(e=>e.id)"
+              :default="project.users?.filter(e=>card.fields[field].value ? card.fields[field].value.includes(e.id) : false).map(e=>e.username)"
+              class="select"
+              @input="e => getMembersSelected(field, e)"
+              />
+              <CustomSelect :multiSelect="card.fields[field].type.startsWith('LIST')" v-else-if="/ENUM/.test(card.fields[field].type)"
+              :options="getCardEnumOptions(card, field)"
+              :default="card.fields[field].value"
+              class="select"
+              @input="e => newFields[field] = e"
+              />
+              <input type="text" v-model="newFields[field]" v-else>
+            </template>
+          </div>
+          <div class="card-modal-content-right">aze</div>
+        </div>
+       
+      </div>
+      <div class="grid" v-if="!createTicket & false">
         <div class="input-with-label" v-for="field, index in Object.keys(card.fields)" :key="index">
           <span class="field-name">{{ field }}</span>
           <span class="field-type">{{ card.fields[field].type }}</span>
@@ -66,11 +90,12 @@
   <script>
   import CustomModal from "./CustomModal.vue";
   import CustomSelect from "./CustomSelect.vue";
+  import EditableText from "./EditableText.vue"
 
   import { getProject, editCard, getCardTypes, createCard } from "@/js/api.js";
   export default {
     name: 'CardModal',
-    components: {CustomModal, CustomSelect},
+    components: {CustomModal, CustomSelect, EditableText},
     props: {
       isVisible: {
         type: Boolean,
@@ -106,7 +131,7 @@
         this.$emit("card-updated");
       },
       async createCard(newFields) {
-        await createCard(newFields);
+        await createCard(this.projectId, this.selectedCardTypeId, newFields);
         this.$emit("card-updated");
       }
     },
@@ -197,6 +222,32 @@
   .input-with-label {
     display: grid;
     grid-template-columns: 33% 33% 34%;
+    height: 100%;
+  }
+
+  .title {
+    font-size: 25px;
+  }
+
+  .card-modal-content {
+    padding-left: 1rem;
+  }
+
+  .card-modal-content-top {
+    background-color: lightcoral;
+  }
+
+  .card-modal-content-right {
+    background-color: lightgreen;
+  }
+
+  .card-modal-content-left {
+    background-color: lightblue;
+  }
+
+  .card-modal-content-body {
+    display: grid;
+    grid-template-columns: 70% 30%;
     height: 100%;
   }
   </style>

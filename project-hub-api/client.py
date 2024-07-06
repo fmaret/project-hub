@@ -99,10 +99,10 @@ def create_app():
         return _get_project_card_types(project_id=project_id)
 
     @app.post("/cards/create")
-    def create_card(project_id: int, card_type_id: int, fields: dict):
-        card_id = _create_card(project_id=project_id, card_type_id=card_type_id)
+    def create_card(project_id: int, card_type_id: int, payload: dict):
+        card_id = _create_card(project_id=project_id, card_type_id=card_type_id).get("result")
         card = _get_card_by_id(card_id=card_id)
-        validate_change_card_fields(card=card, new_fields=fields, project_id=project_id)
+        validate_change_card_fields(card=card, new_fields=payload.get("fields", {}), project_id=project_id)
         return _get_card_by_id(card_id=card_id)
 
     app.add_middleware(
