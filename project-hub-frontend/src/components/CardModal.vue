@@ -1,25 +1,17 @@
 <template>
     <CustomModal :isVisible="isVisible" :title="createTicket ? 'Créer un ticket' : 'Editer un ticket'" @close="this.$emit('close')">
+      {{ newFields }}
       <div class="card-modal-content">
         <div class="card-modal-content-top">aze</div>
-        <EditableText :text="card.fields['title'].value" class="title"/>
+        <EditableText :text="card.fields['title'].value" class="title"
+        @edited-text="newVal => updateField('title', newVal)"
+        />
         <div class="card-modal-content-body">
           <div class="card-modal-content-left">
-            <template v-for="field, index in ['assignees']" :key="index">
-              <CustomSelect :multiSelect="card.fields[field].type.startsWith('LIST')" v-if="/MEMBER/.test(card.fields[field].type)"
-              :options="project.users?.map(e=>e.username)"
-              :returnedValues="project.users?.map(e=>e.id)"
-              :default="project.users?.filter(e=>card.fields[field].value ? card.fields[field].value.includes(e.id) : false).map(e=>e.username)"
-              class="select"
-              @input="e => getMembersSelected(field, e)"
+            <template v-for="field, index in ['description', 'assignees']" :key="index">
+              <CardFieldEdition :fieldName="field" :fieldObject="card.fields[field]" :fieldDefaultValue="newFields[field]" :project="project"
+              @field-updated="newVal => updateField(field, newVal)"
               />
-              <CustomSelect :multiSelect="card.fields[field].type.startsWith('LIST')" v-else-if="/ENUM/.test(card.fields[field].type)"
-              :options="getCardEnumOptions(card, field)"
-              :default="card.fields[field].value"
-              class="select"
-              @input="e => newFields[field] = e"
-              />
-              <input type="text" v-model="newFields[field]" v-else>
             </template>
           </div>
           <div class="card-modal-content-right">aze</div>
@@ -90,12 +82,13 @@
   <script>
   import CustomModal from "./CustomModal.vue";
   import CustomSelect from "./CustomSelect.vue";
-  import EditableText from "./EditableText.vue"
+  import EditableText from "./EditableText.vue";
+  import CardFieldEdition from "./CardFieldEdition.vue";
 
   import { getProject, editCard, getCardTypes, createCard } from "@/js/api.js";
   export default {
     name: 'CardModal',
-    components: {CustomModal, CustomSelect, EditableText},
+    components: {CustomModal, CustomSelect, EditableText, CardFieldEdition},
     props: {
       isVisible: {
         type: Boolean,
@@ -111,6 +104,9 @@
       }
     },
     methods: {
+      updateField(field, newVal){
+        this.newFields[field] = newVal;
+      },
       getCardEnumOptions(card, field) {
         return card.fields[field].values[card.fields[field].type.split("_")[1].split("]")[0]];
       },
@@ -243,6 +239,8 @@
 
   .card-modal-content-left {
     background-color: lightblue;
+    display: flex;
+    flex-direction: column;
   }
 
   .card-modal-content-body {

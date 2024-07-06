@@ -458,6 +458,7 @@ def _insert_or_update_card_field(card_id, field_id, current_value):
     ON CONFLICT (card_id, field_id)
     DO UPDATE SET current_value = EXCLUDED.current_value;
     """)
+    print("query", query)
     params = ()
     return {'sql': query, 'params': params, 'fetchall': True}
 
@@ -508,7 +509,7 @@ def _create_card(project_id: int, card_type_id: int):
 def convert_to_jsonb(value):
     print("value", value, type(value))
     if type(value) == str:
-        return f"\"{value}\""
+        return "\"{}\"".format(value.replace("'", "''"))
     if type(value) == list:
         print("myval", str(value))
         return str(value).replace("'", '"')

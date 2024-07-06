@@ -18,7 +18,7 @@
       validateText(e) {
         this.editedText = e.target.value;
         this.editText = false;
-        this.$emit("input", this.editedText);
+        this.$emit("edited-text", this.editedText);
       }
     },
     data: () => ({
